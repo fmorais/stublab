@@ -125,21 +125,21 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Infraestrutura
 
-- [ ] **T17** [S] @frontend-dev — Configurar React Router
+- [x] **T17** [S] @frontend-dev — Configurar React Router
   - Rotas: `/`, `/endpoints/new`, `/endpoints/:id/edit`
   - Layout base com navbar
   - Critério: navegação entre rotas funcionando
 
-- [ ] **T18** [S] @frontend-dev — Criar `api-client.ts`
+- [x] **T18** [S] @frontend-dev — Criar `api-client.ts`
   - Arquivo: `apps/web/src/lib/api-client.ts`
   - Wrapper sobre fetch com base URL configurável via env, tratamento de erros padronizado
   - Critério: métodos `get`, `post`, `put`, `patch`, `del` funcionando
 
-- [ ] **T19** [S] @frontend-dev — Configurar TanStack Query
+- [x] **T19** [S] @frontend-dev — Configurar TanStack Query
   - Provider no App com configurações de cache adequadas
   - Critério: `useQuery` e `useMutation` disponíveis nos componentes
 
-- [ ] **T20** [S] @frontend-dev — Criar tipos compartilhados
+- [x] **T20** [S] @frontend-dev — Criar tipos compartilhados
   - Arquivo: `apps/web/src/types/endpoint.ts`
   - Espelha tipos do backend: `Endpoint`, `CreateEndpointInput`, `UpdateEndpointInput`, `HttpMethod`
   - Critério: tipos compilando em strict mode
@@ -148,28 +148,28 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Hooks de API
 
-- [ ] **T21** [S] @frontend-dev — Criar `useEndpoints()` hook
+- [x] **T21** [S] @frontend-dev — Criar `useEndpoints()` hook
   - Arquivo: `apps/web/src/hooks/use-endpoints.ts`
   - Lista endpoints com filtros (search, method, active)
   - Critério: hook retorna `{ data, isLoading, error }`
 
-- [ ] **T22** [S] @frontend-dev — Criar `useEndpoint(id)` hook
+- [x] **T22** [S] @frontend-dev — Criar `useEndpoint(id)` hook
   - Busca endpoint único por ID
   - Critério: funciona com ID válido e retorna erro tratado para ID inválido
 
-- [ ] **T23** [S] @frontend-dev — Criar `useCreateEndpoint()` mutation
+- [x] **T23** [S] @frontend-dev — Criar `useCreateEndpoint()` mutation
   - POST + invalida query de lista após sucesso
   - Critério: mutation cria e lista atualiza automaticamente
 
-- [ ] **T24** [S] @frontend-dev — Criar `useUpdateEndpoint()` mutation
+- [x] **T24** [S] @frontend-dev — Criar `useUpdateEndpoint()` mutation
   - PUT + invalida queries de lista e detalhe
   - Critério: mutation atualiza e cache revalida
 
-- [ ] **T25** [S] @frontend-dev — Criar `useToggleEndpoint()` mutation
+- [x] **T25** [S] @frontend-dev — Criar `useToggleEndpoint()` mutation
   - PATCH toggle + atualização otimista do cache
   - Critério: toggle reflete imediatamente na UI, reverte em erro
 
-- [ ] **T26** [S] @frontend-dev — Criar `useDeleteEndpoint()` mutation
+- [x] **T26** [S] @frontend-dev — Criar `useDeleteEndpoint()` mutation
   - DELETE + invalida query de lista
   - Critério: mutation remove e lista atualiza
 
@@ -177,28 +177,28 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Componentes UI
 
-- [ ] **T27** [M] @frontend-dev — Criar componente `EndpointForm`
+- [x] **T27** [M] @frontend-dev — Criar componente `EndpointForm`
   - Arquivo: `apps/web/src/components/endpoint-form.tsx`
   - Formulário reutilizável (criar/editar) com react-hook-form + Zod
   - Campos: name, method, path, responseStatus, responseBody (textarea), responseHeaders, delay
   - Critério: todos os campos com validação e mensagens de erro corretas
 
-- [ ] **T28** [S] @frontend-dev — Criar componente `MethodBadge`
+- [x] **T28** [S] @frontend-dev — Criar componente `MethodBadge`
   - Arquivo: `apps/web/src/components/method-badge.tsx`
   - Badge colorido por método: GET=verde, POST=azul, PUT=amarelo, PATCH=laranja, DELETE=vermelho
   - Critério: renderiza corretamente para todos os 5 métodos
 
-- [ ] **T29** [S] @frontend-dev — Criar componente `EndpointTable`
+- [x] **T29** [S] @frontend-dev — Criar componente `EndpointTable`
   - Arquivo: `apps/web/src/components/endpoint-table.tsx`
   - Colunas: Nome, Método (MethodBadge), Path, Status, Ativo (Switch), Ações (editar/deletar)
   - Critério: renderiza lista, toggle funciona, links de editar navegam corretamente
 
-- [ ] **T30** [S] @frontend-dev — Criar componente `DeleteConfirmDialog`
+- [x] **T30** [S] @frontend-dev — Criar componente `DeleteConfirmDialog`
   - Arquivo: `apps/web/src/components/delete-confirm-dialog.tsx`
   - Usa shadcn/ui AlertDialog; exibe nome do endpoint a ser deletado
   - Critério: abre, confirma (chama callback), cancela sem efeito
 
-- [ ] **T31** [S] @frontend-dev — Criar componente `SearchFilters`
+- [x] **T31** [S] @frontend-dev — Criar componente `SearchFilters`
   - Arquivo: `apps/web/src/components/search-filters.tsx`
   - Input de busca + Select de método HTTP + filtro de status
   - Critério: mudanças nos filtros atualizam a query de listagem com debounce no search
@@ -207,19 +207,19 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Páginas
 
-- [ ] **T32** [M] @frontend-dev — Implementar página `/` (lista de endpoints)
+- [x] **T32** [M] @frontend-dev — Implementar página `/` (lista de endpoints)
   - Arquivo: `apps/web/src/pages/endpoints-list.tsx`
   - Compõe: SearchFilters + EndpointTable
   - Botão "Novo endpoint", estados de loading (skeleton) e erro
   - Critério: lista endpoints do backend, filtros funcionam, ações inline funcionam
 
-- [ ] **T33** [M] @frontend-dev — Implementar página `/endpoints/new`
+- [x] **T33** [M] @frontend-dev — Implementar página `/endpoints/new`
   - Arquivo: `apps/web/src/pages/endpoint-new.tsx`
   - EndpointForm em modo criação; redireciona para `/` após sucesso
   - Exibe erro de API inline (inclusive 409 com mensagem amigável)
   - Critério: cria endpoint e ele aparece na lista
 
-- [ ] **T34** [M] @frontend-dev — Implementar página `/endpoints/:id/edit`
+- [x] **T34** [M] @frontend-dev — Implementar página `/endpoints/:id/edit`
   - Arquivo: `apps/web/src/pages/endpoint-edit.tsx`
   - Carrega endpoint existente (loading state enquanto busca)
   - EndpointForm em modo edição + botão deletar com DeleteConfirmDialog
@@ -229,12 +229,12 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Testes
 
-- [ ] **T35** [M] @tester — Testes de integração E2E backend
+- [x] **T35** [M] @tester — Testes de integração E2E backend
   - Cobrir fluxo completo: criar → listar → editar → toggle → deletar
   - Cobrir mock engine: endpoint ativo responde, inativo não responde, 404 sem match
   - Critério: todos os cenários do requirements.md cobertos, mínimo 80% coverage nas rotas e services
 
-- [ ] **T36** [M] @tester — Testes de componentes React
+- [x] **T36** [M] @tester — Testes de componentes React
   - EndpointForm (validações), EndpointTable (render + interações), páginas principais
   - Critério: componentes renderizam e interagem corretamente, erros de API exibidos
 
@@ -242,11 +242,11 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Revisão
 
-- [ ] **T37** [S] @code-reviewer — Revisão de código backend
+- [x] **T37** [S] @code-reviewer — Revisão de código backend
   - Verificar convenções CLAUDE.md, tipagem strict, sem `any`, testes cobrindo erros
   - Critério: nenhum blocker encontrado
 
-- [ ] **T38** [S] @code-reviewer — Revisão de código frontend
+- [x] **T38** [S] @code-reviewer — Revisão de código frontend
   - Verificar hooks customizados, sem fetch direto, acessibilidade básica, Tailwind sem CSS externo
   - Critério: nenhum blocker encontrado
 

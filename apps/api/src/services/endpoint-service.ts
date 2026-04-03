@@ -1,8 +1,9 @@
-import { eq, and, or, like, ne } from 'drizzle-orm'
+import { eq, and, or, like, ne, type SQL } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { db } from '../db/index.js'
 import { endpoints } from '../db/schema.js'
 import type { Endpoint, CreateEndpointInput, UpdateEndpointInput, HttpMethod } from '../types/endpoint.js'
+import { rowToEndpoint } from '../lib/mappers.js'
 
 export class EndpointServiceError extends Error {
   constructor(
@@ -11,22 +12,6 @@ export class EndpointServiceError extends Error {
   ) {
     super(message)
     this.name = 'EndpointServiceError'
-  }
-}
-
-function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
-  return {
-    id: row.id,
-    name: row.name,
-    method: row.method as HttpMethod,
-    path: row.path,
-    active: row.active,
-    responseStatus: row.responseStatus,
-    responseBody: row.responseBody,
-    responseHeaders: (row.responseHeaders ?? {}) as Record<string, string>,
-    delay: row.delay,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
   }
 }
 
@@ -67,7 +52,17 @@ export const EndpointService = {
       updatedAt: now,
     }
 
-    await db.insert(endpoints).values(newEndpoint)
+    try {
+      await db.insert(endpoints).values(newEndpoint)
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+        throw new EndpointServiceError(
+          'CONFLICT',
+          `Já existe um endpoint ativo com o método ${input.method} e path ${input.path}`,
+        )
+      }
+      throw err
+    }
 
     const [created] = await db.select().from(endpoints).where(eq(endpoints.id, id))
 
@@ -77,7 +72,7 @@ export const EndpointService = {
   async findAll(
     filters?: { search?: string; method?: HttpMethod; active?: boolean },
   ): Promise<{ data: Endpoint[]; total: number }> {
-    const conditions = []
+    const conditions: (SQL<unknown> | undefined)[] = []
 
     if (filters?.search) {
       const term = `%${filters.search}%`
@@ -198,7 +193,17 @@ export const EndpointService = {
 
     const now = new Date().toISOString()
 
-    await db.update(endpoints).set({ active: newActive, updatedAt: now }).where(eq(endpoints.id, id))
+    try {
+      await db.update(endpoints).set({ active: newActive, updatedAt: now }).where(eq(endpoints.id, id))
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+        throw new EndpointServiceError(
+          'CONFLICT',
+          `Já existe um endpoint ativo com o método ${existing.method} e path ${existing.path}`,
+        )
+      }
+      throw err
+    }
 
     return { id, active: newActive, updatedAt: now }
   },

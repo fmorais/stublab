@@ -7,20 +7,21 @@ interface RequestOptions {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const hasBody = options.body !== undefined
   const response = await fetch(`${BASE_URL}${path}`, {
     method: options.method ?? 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody && { 'Content-Type': 'application/json' }),
       ...options.headers,
     },
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: hasBody ? JSON.stringify(options.body) : undefined,
   })
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error', code: 'UNKNOWN' }))
     throw Object.assign(new Error(error.error ?? 'Request failed'), {
       status: response.status,
-      code: error.code,
+      code: error.code ?? 'UNKNOWN',
     })
   }
 
