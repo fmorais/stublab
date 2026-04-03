@@ -125,21 +125,21 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Infraestrutura
 
-- [ ] **T17** [S] @frontend-dev — Configurar React Router
+- [x] **T17** [S] @frontend-dev — Configurar React Router
   - Rotas: `/`, `/endpoints/new`, `/endpoints/:id/edit`
   - Layout base com navbar
   - Critério: navegação entre rotas funcionando
 
-- [ ] **T18** [S] @frontend-dev — Criar `api-client.ts`
+- [x] **T18** [S] @frontend-dev — Criar `api-client.ts`
   - Arquivo: `apps/web/src/lib/api-client.ts`
   - Wrapper sobre fetch com base URL configurável via env, tratamento de erros padronizado
   - Critério: métodos `get`, `post`, `put`, `patch`, `del` funcionando
 
-- [ ] **T19** [S] @frontend-dev — Configurar TanStack Query
+- [x] **T19** [S] @frontend-dev — Configurar TanStack Query
   - Provider no App com configurações de cache adequadas
   - Critério: `useQuery` e `useMutation` disponíveis nos componentes
 
-- [ ] **T20** [S] @frontend-dev — Criar tipos compartilhados
+- [x] **T20** [S] @frontend-dev — Criar tipos compartilhados
   - Arquivo: `apps/web/src/types/endpoint.ts`
   - Espelha tipos do backend: `Endpoint`, `CreateEndpointInput`, `UpdateEndpointInput`, `HttpMethod`
   - Critério: tipos compilando em strict mode
@@ -148,28 +148,28 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Hooks de API
 
-- [ ] **T21** [S] @frontend-dev — Criar `useEndpoints()` hook
+- [x] **T21** [S] @frontend-dev — Criar `useEndpoints()` hook
   - Arquivo: `apps/web/src/hooks/use-endpoints.ts`
   - Lista endpoints com filtros (search, method, active)
   - Critério: hook retorna `{ data, isLoading, error }`
 
-- [ ] **T22** [S] @frontend-dev — Criar `useEndpoint(id)` hook
+- [x] **T22** [S] @frontend-dev — Criar `useEndpoint(id)` hook
   - Busca endpoint único por ID
   - Critério: funciona com ID válido e retorna erro tratado para ID inválido
 
-- [ ] **T23** [S] @frontend-dev — Criar `useCreateEndpoint()` mutation
+- [x] **T23** [S] @frontend-dev — Criar `useCreateEndpoint()` mutation
   - POST + invalida query de lista após sucesso
   - Critério: mutation cria e lista atualiza automaticamente
 
-- [ ] **T24** [S] @frontend-dev — Criar `useUpdateEndpoint()` mutation
+- [x] **T24** [S] @frontend-dev — Criar `useUpdateEndpoint()` mutation
   - PUT + invalida queries de lista e detalhe
   - Critério: mutation atualiza e cache revalida
 
-- [ ] **T25** [S] @frontend-dev — Criar `useToggleEndpoint()` mutation
+- [x] **T25** [S] @frontend-dev — Criar `useToggleEndpoint()` mutation
   - PATCH toggle + atualização otimista do cache
   - Critério: toggle reflete imediatamente na UI, reverte em erro
 
-- [ ] **T26** [S] @frontend-dev — Criar `useDeleteEndpoint()` mutation
+- [x] **T26** [S] @frontend-dev — Criar `useDeleteEndpoint()` mutation
   - DELETE + invalida query de lista
   - Critério: mutation remove e lista atualiza
 
