@@ -1,45 +1,92 @@
-import { useForm } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { Endpoint, CreateEndpointInput, UpdateEndpointInput } from '@web/types/endpoint'
+import { matchingRuleSchema } from '@web/schemas/matching-rule'
+import type { MatchingRuleFormValues } from '@web/schemas/matching-rule'
+import type { CreateEndpointInput, UpdateEndpointInput } from '@web/types/endpoint'
+import { Button } from '@web/components/ui/button'
+import { Input } from '@web/components/ui/input'
+import { Label } from '@web/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@web/components/ui/select'
+import { MatchingRulesSection } from '@web/components/matching-rules-section'
+import { MatchingRulePreview } from '@web/components/matching-rule-preview'
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório').max(100, 'Máximo 100 caracteres'),
+  name: z.string().min(1, 'Nome é obrigatório').max(200),
   method: z.enum(HTTP_METHODS, { required_error: 'Método é obrigatório' }),
-  path: z.string().min(1, 'Path é obrigatório').startsWith('/', 'Path deve começar com /'),
-  responseStatus: z.coerce.number().int().min(100, 'Mínimo 100').max(599, 'Máximo 599'),
-  responseBody: z.string().default('{}'),
-  responseHeaders: z.string().default('{}'),
-  delay: z.coerce
-    .number()
+  path: z.string().min(1, 'Path é obrigatório').regex(/^\//, 'Path deve começar com /'),
+  responseStatus: z.coerce
+    .number({ invalid_type_error: 'Status deve ser um número' })
     .int()
-    .min(0, 'Mínimo 0ms')
-    .max(30000, 'Máximo 30000ms')
+    .min(100, 'Status mínimo é 100')
+    .max(599, 'Status máximo é 599'),
+  responseBody: z.string().optional().default(''),
+  delay: z.coerce
+    .number({ invalid_type_error: 'Delay deve ser um número' })
+    .int()
+    .min(0, 'Delay mínimo é 0')
+    .max(30000, 'Delay máximo é 30000 ms')
+    .optional()
     .default(0),
+  matchingRules: z.array(matchingRuleSchema).max(20).optional().default([]),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
+interface EndpointFormDefaultValues {
+  name?: string
+  method?: typeof HTTP_METHODS[number]
+  path?: string
+  responseStatus?: number
+  responseBody?: string
+  delay?: number
+  matchingRules?: Array<{
+    source: MatchingRuleFormValues['source']
+    field: string
+    operator: MatchingRuleFormValues['operator']
+    value?: string | null
+  }>
+}
+
 interface EndpointFormProps {
-  defaultValues?: Partial<Endpoint>
+  defaultValues?: EndpointFormDefaultValues
   onSubmit: (data: CreateEndpointInput | UpdateEndpointInput) => void
-  isLoading?: boolean
-  error?: string | null
+  onCancel?: () => void
+  isPending?: boolean
+  isLoading?: boolean   // alias para isPending (compatibilidade spec-001)
+  isError?: boolean
+  error?: string | null // alias para errorMessage (compatibilidade spec-001)
+  errorMessage?: string
   submitLabel?: string
 }
 
 export function EndpointForm({
   defaultValues,
   onSubmit,
-  isLoading,
+  onCancel,
+  isPending = false,
+  isLoading = false,
+  isError = false,
   error,
-  submitLabel = 'Salvar',
+  errorMessage,
+  submitLabel = 'Salvar endpoint',
 }: EndpointFormProps) {
+  const pending = isPending || isLoading
+  const displayError = errorMessage ?? (error ?? undefined)
   const {
     register,
     handleSubmit,
+    control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -48,140 +95,225 @@ export function EndpointForm({
       method: defaultValues?.method ?? 'GET',
       path: defaultValues?.path ?? '/',
       responseStatus: defaultValues?.responseStatus ?? 200,
-      responseBody: defaultValues?.responseBody ?? '{}',
-      responseHeaders: defaultValues?.responseHeaders
-        ? JSON.stringify(defaultValues.responseHeaders, null, 2)
-        : '{}',
+      responseBody: defaultValues?.responseBody ?? '',
       delay: defaultValues?.delay ?? 0,
+      matchingRules: defaultValues?.matchingRules?.map((r) => ({
+        source: r.source,
+        field: r.field,
+        operator: r.operator,
+        value: r.value ?? '',
+      })) ?? [],
     },
   })
 
-  function handleFormSubmit(values: FormValues) {
-    let responseHeaders: Record<string, string> = {}
-    try {
-      responseHeaders = JSON.parse(values.responseHeaders)
-    } catch {
-      responseHeaders = {}
+  const { fields, append, remove, update } = useFieldArray({
+    control,
+    name: 'matchingRules',
+  })
+
+  const watchedMethod = watch('method')
+  const watchedPath = watch('path')
+  const watchedRules = watch('matchingRules') ?? []
+
+  function handleFormSubmit(data: FormValues) {
+    const payload: CreateEndpointInput = {
+      name: data.name,
+      method: data.method,
+      path: data.path,
+      responseStatus: data.responseStatus,
+      responseBody: data.responseBody,
+      delay: data.delay,
+      matchingRules: data.matchingRules?.map((r) => ({
+        source: r.source,
+        field: r.field,
+        operator: r.operator,
+        value: r.value ?? null,
+      })),
     }
-    onSubmit({
-      ...values,
-      responseHeaders,
+    onSubmit(payload)
+  }
+
+  function handleRuleAdd() {
+    append({ source: 'query', field: '', operator: 'eq', value: '' })
+  }
+
+  function handleRuleRemove(index: number) {
+    remove(index)
+  }
+
+  function handleRuleUpdate(index: number, rule: MatchingRuleFormValues) {
+    update(index, rule)
+  }
+
+  // Erros das regras indexados por posição
+  const rulesErrors: Record<number, {
+    source?: string
+    field?: string
+    operator?: string
+    value?: string
+  }> = {}
+
+  if (errors.matchingRules && Array.isArray(errors.matchingRules)) {
+    errors.matchingRules.forEach((ruleError, index) => {
+      if (ruleError) {
+        rulesErrors[index] = {
+          source: ruleError.source?.message,
+          field: ruleError.field?.message,
+          operator: ruleError.operator?.message,
+          value: ruleError.value?.message,
+        }
+      }
     })
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
-      {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {error}
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {(isError || displayError) && displayError && (
+        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+          {displayError}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
-          <label htmlFor="ep-name" className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-          <input
-            id="ep-name"
-            {...register('name')}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ex: Listar usuários"
-          />
-          {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
-        </div>
+      {/* Nome */}
+      <div className="space-y-1.5">
+        <Label htmlFor="name">Nome</Label>
+        <Input
+          id="name"
+          placeholder="Ex: Listar usuários"
+          aria-invalid={!!errors.name}
+          {...register('name')}
+        />
+        {errors.name && (
+          <p className="text-xs text-destructive">{errors.name.message}</p>
+        )}
+      </div>
 
-        <div>
-          <label htmlFor="ep-method" className="block text-sm font-medium text-gray-700 mb-1">Método</label>
-          <select
-            id="ep-method"
-            {...register('method')}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Método + Path */}
+      <div className="flex gap-3">
+        <div className="space-y-1.5 w-36">
+          <Label htmlFor="method">Método</Label>
+          <Select
+            value={watchedMethod}
+            onValueChange={(val) =>
+              setValue('method', val as typeof HTTP_METHODS[number], { shouldValidate: true })
+            }
           >
-            {HTTP_METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          {errors.method && <p className="mt-1 text-xs text-red-600">{errors.method.message}</p>}
+            <SelectTrigger id="method" aria-invalid={!!errors.method}>
+              <SelectValue placeholder="Método" />
+            </SelectTrigger>
+            <SelectContent>
+              {HTTP_METHODS.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.method && (
+            <p className="text-xs text-destructive">{errors.method.message}</p>
+          )}
         </div>
 
-        <div>
-          <label htmlFor="ep-path" className="block text-sm font-medium text-gray-700 mb-1">Path</label>
-          <input
-            id="ep-path"
-            {...register('path')}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="space-y-1.5 flex-1">
+          <Label htmlFor="path">Path</Label>
+          <Input
+            id="path"
             placeholder="/api/users/:id"
+            aria-invalid={!!errors.path}
+            {...register('path')}
           />
-          {errors.path && <p className="mt-1 text-xs text-red-600">{errors.path.message}</p>}
-        </div>
-
-        <div>
-          <label htmlFor="ep-response-status" className="block text-sm font-medium text-gray-700 mb-1">Status HTTP</label>
-          <input
-            id="ep-response-status"
-            {...register('responseStatus')}
-            type="number"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="200"
-          />
-          {errors.responseStatus && (
-            <p className="mt-1 text-xs text-red-600">{errors.responseStatus.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="ep-delay" className="block text-sm font-medium text-gray-700 mb-1">Delay (ms)</label>
-          <input
-            id="ep-delay"
-            {...register('delay')}
-            type="number"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="0"
-          />
-          {errors.delay && <p className="mt-1 text-xs text-red-600">{errors.delay.message}</p>}
-        </div>
-
-        <div className="col-span-2">
-          <label htmlFor="ep-response-body" className="block text-sm font-medium text-gray-700 mb-1">Response Body</label>
-          <textarea
-            id="ep-response-body"
-            {...register('responseBody')}
-            rows={6}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="{}"
-          />
-          {errors.responseBody && (
-            <p className="mt-1 text-xs text-red-600">{errors.responseBody.message}</p>
-          )}
-        </div>
-
-        <div className="col-span-2">
-          <label htmlFor="ep-response-headers" className="block text-sm font-medium text-gray-700 mb-1">
-            Response Headers (JSON)
-          </label>
-          <textarea
-            id="ep-response-headers"
-            {...register('responseHeaders')}
-            rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder='{ "Content-Type": "application/json" }'
-          />
-          {errors.responseHeaders && (
-            <p className="mt-1 text-xs text-red-600">{errors.responseHeaders.message}</p>
+          {errors.path && (
+            <p className="text-xs text-destructive">{errors.path.message}</p>
           )}
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isLoading ? 'Salvando...' : submitLabel}
-        </button>
+      {/* Seção Response */}
+      <div className="space-y-4">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          Response
+        </p>
+
+        {/* Status + Delay */}
+        <div className="flex gap-3">
+          <div className="space-y-1.5 w-28">
+            <Label htmlFor="responseStatus">Status HTTP</Label>
+            <Input
+              id="responseStatus"
+              type="number"
+              placeholder="200"
+              aria-invalid={!!errors.responseStatus}
+              {...register('responseStatus')}
+            />
+            {errors.responseStatus && (
+              <p className="text-xs text-destructive">{errors.responseStatus.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5 w-36">
+            <Label htmlFor="delay">Delay (ms)</Label>
+            <Input
+              id="delay"
+              type="number"
+              placeholder="0"
+              aria-invalid={!!errors.delay}
+              {...register('delay')}
+            />
+            {errors.delay && (
+              <p className="text-xs text-destructive">{errors.delay.message}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="space-y-1.5">
+          <Label htmlFor="responseBody">Body (JSON)</Label>
+          <textarea
+            id="responseBody"
+            rows={6}
+            placeholder='{"status": "ok"}'
+            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono resize-y"
+            aria-invalid={!!errors.responseBody}
+            {...register('responseBody')}
+          />
+          {errors.responseBody && (
+            <p className="text-xs text-destructive">{errors.responseBody.message}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Seção Regras de Matching */}
+      <div className="space-y-3">
+        <MatchingRulesSection
+          rules={watchedRules}
+          onAdd={handleRuleAdd}
+          onRemove={handleRuleRemove}
+          onUpdate={handleRuleUpdate}
+          errors={rulesErrors}
+        />
+
+        {watchedRules.length > 0 && (
+          <MatchingRulePreview
+            method={watchedMethod ?? 'GET'}
+            path={watchedPath ?? '/'}
+            rules={watchedRules}
+          />
+        )}
+      </div>
+
+      {/* Ações */}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
+            Cancelar
+          </Button>
+        )}
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Salvando...' : submitLabel}
+        </Button>
       </div>
     </form>
   )
 }
+
+export type { EndpointFormDefaultValues }

@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { EndpointService, EndpointServiceError } from '../../services/endpoint-service.js'
+import { matchingRuleSchema } from '../../schemas/matching-rule.js'
 
 const createBodySchema = z.object({
   name: z.string().min(1).max(100),
@@ -10,6 +11,7 @@ const createBodySchema = z.object({
   responseBody: z.string().default('{}'),
   responseHeaders: z.record(z.string()).default({}),
   delay: z.number().int().min(0).max(30000).default(0),
+  matchingRules: z.array(matchingRuleSchema).max(20).optional().default([]),
 })
 
 export async function createEndpointRoute(app: FastifyInstance) {

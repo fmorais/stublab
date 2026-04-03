@@ -84,4 +84,56 @@ describe('GET /api/endpoints/:id', () => {
 
     await app.close()
   })
+
+  it('retorna matchingRules no response (array, pode ser vazio)', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: { name: 'Com regras', method: 'GET', path: '/com-regras-get', responseStatus: 200 },
+    })
+    const { id } = created.json()
+
+    const res = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(Array.isArray(body.matchingRules)).toBe(true)
+
+    await app.close()
+  })
+
+  it('retorna matchingRules populadas quando endpoint foi criado com regras', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Com regra body',
+        method: 'POST',
+        path: '/com-regra-body',
+        responseStatus: 200,
+        matchingRules: [{ source: 'body', field: 'tipo', operator: 'eq', value: 'PIX' }],
+      },
+    })
+    const { id } = created.json()
+
+    const res = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.matchingRules).toHaveLength(1)
+    expect(body.matchingRules[0]).toMatchObject({
+      source: 'body',
+      field: 'tipo',
+      operator: 'eq',
+      value: 'PIX',
+    })
+
+    await app.close()
+  })
 })

@@ -1,9 +1,9 @@
-import { eq, and, or, like, ne, type SQL } from 'drizzle-orm'
+import { eq, and, or, like, ne } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { db } from '../db/index.js'
 import { endpoints } from '../db/schema.js'
 import type { Endpoint, CreateEndpointInput, UpdateEndpointInput, HttpMethod } from '../types/endpoint.js'
-import { rowToEndpoint } from '../lib/mappers.js'
+import { MatchingRuleService } from './matching-rule-service.js'
 
 export class EndpointServiceError extends Error {
   constructor(
@@ -15,24 +15,57 @@ export class EndpointServiceError extends Error {
   }
 }
 
+function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
+  return {
+    id: row.id,
+    name: row.name,
+    method: row.method as HttpMethod,
+    path: row.path,
+    active: row.active,
+    responseStatus: row.responseStatus,
+    responseBody: row.responseBody,
+    responseHeaders: (row.responseHeaders ?? {}) as Record<string, string>,
+    delay: row.delay,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    // Por que: matchingRules são carregadas separadamente (T08/T09). Aqui o array vazio
+    // garante compatibilidade com a interface — os callers que precisam das regras
+    // devem usar os métodos que populam o campo (a ser implementado em T08/T09).
+    matchingRules: [],
+  }
+}
+
 export const EndpointService = {
   async create(input: CreateEndpointInput): Promise<Endpoint> {
-    const existing = await db
-      .select()
-      .from(endpoints)
-      .where(
-        and(
-          eq(endpoints.method, input.method),
-          eq(endpoints.path, input.path),
-          eq(endpoints.active, true),
-        ),
-      )
+    // Por que: só é conflito quando o novo endpoint NÃO tem regras (seria um segundo fallback).
+    // Endpoints com regras podem coexistir no mesmo method+path — é o caso de uso central da spec-002.
+    const incomingHasRules = (input.matchingRules?.length ?? 0) > 0
 
-    if (existing.length > 0) {
-      throw new EndpointServiceError(
-        'CONFLICT',
-        `Já existe um endpoint ativo com o método ${input.method} e path ${input.path}`,
-      )
+    if (!incomingHasRules) {
+      const existingFallbacks = await db
+        .select({ id: endpoints.id })
+        .from(endpoints)
+        .where(
+          and(
+            eq(endpoints.method, input.method),
+            eq(endpoints.path, input.path),
+            eq(endpoints.active, true),
+          ),
+        )
+
+      // Filtra apenas os que não têm regras (fallbacks)
+      const fallbackIds = existingFallbacks.map((e) => e.id)
+      if (fallbackIds.length > 0) {
+        const existingRules = await MatchingRuleService.findByEndpointIds(fallbackIds)
+        const hasFallback = fallbackIds.some((id) => (existingRules.get(id) ?? []).length === 0)
+
+        if (hasFallback) {
+          throw new EndpointServiceError(
+            'CONFLICT',
+            `Já existe um endpoint ativo sem regras com o método ${input.method} e path ${input.path}`,
+          )
+        }
+      }
     }
 
     const now = new Date().toISOString()
@@ -52,27 +85,21 @@ export const EndpointService = {
       updatedAt: now,
     }
 
-    try {
-      await db.insert(endpoints).values(newEndpoint)
-    } catch (err) {
-      if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-        throw new EndpointServiceError(
-          'CONFLICT',
-          `Já existe um endpoint ativo com o método ${input.method} e path ${input.path}`,
-        )
-      }
-      throw err
-    }
+    await db.insert(endpoints).values(newEndpoint)
 
     const [created] = await db.select().from(endpoints).where(eq(endpoints.id, id))
 
-    return rowToEndpoint(created)
+    const rules = input.matchingRules?.length
+      ? await MatchingRuleService.createMany(id, input.matchingRules)
+      : []
+
+    return { ...rowToEndpoint(created), matchingRules: rules }
   },
 
   async findAll(
     filters?: { search?: string; method?: HttpMethod; active?: boolean },
   ): Promise<{ data: Endpoint[]; total: number }> {
-    const conditions: (SQL<unknown> | undefined)[] = []
+    const conditions = []
 
     if (filters?.search) {
       const term = `%${filters.search}%`
@@ -95,13 +122,21 @@ export const EndpointService = {
             .where(and(...conditions))
         : await db.select().from(endpoints)
 
-    const data = rows.map(rowToEndpoint)
+    const baseEndpoints = rows.map(rowToEndpoint)
+    const ids = baseEndpoints.map((e) => e.id)
+    const rulesMap = await MatchingRuleService.findByEndpointIds(ids)
+    const data = baseEndpoints.map((e) => ({
+      ...e,
+      matchingRules: rulesMap.get(e.id) ?? [],
+    }))
     return { data, total: data.length }
   },
 
   async findById(id: string): Promise<Endpoint | null> {
     const [row] = await db.select().from(endpoints).where(eq(endpoints.id, id))
-    return row ? rowToEndpoint(row) : null
+    if (!row) return null
+    const rules = await MatchingRuleService.findByEndpointId(id)
+    return { ...rowToEndpoint(row), matchingRules: rules }
   },
 
   async update(id: string, input: UpdateEndpointInput): Promise<Endpoint> {
@@ -119,24 +154,39 @@ export const EndpointService = {
       (input.path !== undefined && input.path !== existing.path)
 
     if (isMethodOrPathChanging && existing.active) {
-      const conflict = await db
-        .select()
-        .from(endpoints)
-        .where(
-          and(
-            eq(endpoints.method, newMethod),
-            eq(endpoints.path, newPath),
-            eq(endpoints.active, true),
-            ne(endpoints.id, id),
-          ),
-        )
+      // Determina se o endpoint resultante terá regras (considera as novas ou as existentes)
+      const updatedRules = input.matchingRules !== undefined
+        ? input.matchingRules
+        : await MatchingRuleService.findByEndpointId(id)
+      const updatedHasRules = updatedRules.length > 0
 
-      if (conflict.length > 0) {
-        throw new EndpointServiceError(
-          'CONFLICT',
-          `Já existe um endpoint ativo com o método ${newMethod} e path ${newPath}`,
-        )
+      if (!updatedHasRules) {
+        // Sem regras → verifica se já existe outro fallback no destino
+        const candidates = await db
+          .select({ id: endpoints.id })
+          .from(endpoints)
+          .where(
+            and(
+              eq(endpoints.method, newMethod),
+              eq(endpoints.path, newPath),
+              eq(endpoints.active, true),
+              ne(endpoints.id, id),
+            ),
+          )
+
+        if (candidates.length > 0) {
+          const rulesMap = await MatchingRuleService.findByEndpointIds(candidates.map((c) => c.id))
+          const hasFallback = candidates.some((c) => (rulesMap.get(c.id) ?? []).length === 0)
+
+          if (hasFallback) {
+            throw new EndpointServiceError(
+              'CONFLICT',
+              `Já existe um endpoint ativo sem regras com o método ${newMethod} e path ${newPath}`,
+            )
+          }
+        }
       }
+      // Com regras → pode coexistir livremente com outros endpoints no mesmo method+path
     }
 
     const now = new Date().toISOString()
@@ -158,7 +208,16 @@ export const EndpointService = {
       .where(eq(endpoints.id, id))
 
     const [updated] = await db.select().from(endpoints).where(eq(endpoints.id, id))
-    return rowToEndpoint(updated)
+
+    let rules
+    if (input.matchingRules !== undefined) {
+      await MatchingRuleService.deleteByEndpointId(id)
+      rules = await MatchingRuleService.createMany(id, input.matchingRules)
+    } else {
+      rules = await MatchingRuleService.findByEndpointId(id)
+    }
+
+    return { ...rowToEndpoint(updated), matchingRules: rules }
   },
 
   async toggle(id: string): Promise<Pick<Endpoint, 'id' | 'active' | 'updatedAt'>> {
@@ -171,39 +230,40 @@ export const EndpointService = {
     const newActive = !existing.active
 
     if (newActive) {
-      const conflict = await db
-        .select()
-        .from(endpoints)
-        .where(
-          and(
-            eq(endpoints.method, existing.method),
-            eq(endpoints.path, existing.path),
-            eq(endpoints.active, true),
-            ne(endpoints.id, id),
-          ),
-        )
+      const currentRules = await MatchingRuleService.findByEndpointId(id)
+      const hasRules = currentRules.length > 0
 
-      if (conflict.length > 0) {
-        throw new EndpointServiceError(
-          'CONFLICT',
-          `Já existe um endpoint ativo com o método ${existing.method} e path ${existing.path}`,
-        )
+      if (!hasRules) {
+        // Fallback ativando → verifica se já existe outro fallback ativo no mesmo method+path
+        const candidates = await db
+          .select({ id: endpoints.id })
+          .from(endpoints)
+          .where(
+            and(
+              eq(endpoints.method, existing.method),
+              eq(endpoints.path, existing.path),
+              eq(endpoints.active, true),
+              ne(endpoints.id, id),
+            ),
+          )
+
+        if (candidates.length > 0) {
+          const rulesMap = await MatchingRuleService.findByEndpointIds(candidates.map((c) => c.id))
+          const hasFallback = candidates.some((c) => (rulesMap.get(c.id) ?? []).length === 0)
+
+          if (hasFallback) {
+            throw new EndpointServiceError(
+              'CONFLICT',
+              `Já existe um endpoint ativo sem regras com o método ${existing.method} e path ${existing.path}`,
+            )
+          }
+        }
       }
     }
 
     const now = new Date().toISOString()
 
-    try {
-      await db.update(endpoints).set({ active: newActive, updatedAt: now }).where(eq(endpoints.id, id))
-    } catch (err) {
-      if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-        throw new EndpointServiceError(
-          'CONFLICT',
-          `Já existe um endpoint ativo com o método ${existing.method} e path ${existing.path}`,
-        )
-      }
-      throw err
-    }
+    await db.update(endpoints).set({ active: newActive, updatedAt: now }).where(eq(endpoints.id, id))
 
     return { id, active: newActive, updatedAt: now }
   },

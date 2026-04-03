@@ -1,64 +1,82 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchFilters } from '@web/components/search-filters'
-import { EndpointTable } from '@web/components/endpoint-table'
 import { useEndpoints } from '@web/hooks/use-endpoints'
-import type { HttpMethod } from '@web/types/endpoint'
-
-interface Filters {
-  search: string
-  method: HttpMethod | ''
-  active: '' | 'true' | 'false'
-}
+import { useDeleteEndpoint } from '@web/hooks/use-delete-endpoint'
+import { useToggleEndpoint } from '@web/hooks/use-toggle-endpoint'
+import { EndpointTable } from '@web/components/endpoint-table'
+import { Button } from '@web/components/ui/button'
+import type { Endpoint } from '@web/types/endpoint'
 
 export function EndpointsList() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<Filters>({ search: '', method: '', active: '' })
+  const { data: endpoints = [], isLoading, isError } = useEndpoints()
+  const deleteMutation = useDeleteEndpoint()
+  const toggleMutation = useToggleEndpoint()
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
-  const { data, isLoading, error } = useEndpoints({
-    search: filters.search || undefined,
-    method: filters.method || undefined,
-    active: filters.active === '' ? undefined : filters.active === 'true',
-  })
+  async function handleToggle(endpoint: Endpoint) {
+    setTogglingId(endpoint.id)
+    setToggleError(null)
+    try {
+      await toggleMutation.mutateAsync(endpoint.id)
+    } catch (err) {
+      const message = (err as { message?: string })?.message ?? 'Erro ao alterar status do endpoint.'
+      setToggleError(message)
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
-  const handleFilterChange = useCallback((f: Filters) => setFilters(f), [])
+  async function handleDelete(endpoint: Endpoint) {
+    if (!confirm(`Excluir "${endpoint.name}"?`)) return
+    await deleteMutation.mutateAsync(endpoint.id)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+        Erro ao carregar endpoints. Verifique se a API está rodando.
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Endpoints</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {data?.total ?? 0} endpoint{data?.total !== 1 ? 's' : ''} cadastrado{data?.total !== 1 ? 's' : ''}
+          <h1 className="text-xl font-semibold">Endpoints</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} cadastrado{endpoints.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => navigate('/endpoints/new')}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Novo endpoint
-        </button>
+        <Button onClick={() => navigate('/endpoints/new')}>
+          + Novo endpoint
+        </Button>
       </div>
 
-      <SearchFilters onFilterChange={handleFilterChange} />
-
-      {isLoading && (
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-12 rounded-md bg-gray-100 animate-pulse" />
-          ))}
+      {toggleError && (
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>{toggleError}</span>
+          <button type="button" onClick={() => setToggleError(null)} className="ml-4 text-red-400 hover:text-red-600 font-medium">✕</button>
         </div>
       )}
 
-      {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          Erro ao carregar endpoints. Verifique se a API está rodando.
-        </div>
-      )}
-
-      {!isLoading && !error && (
-        <EndpointTable endpoints={data?.data ?? []} />
-      )}
+      <EndpointTable
+        endpoints={endpoints}
+        togglingId={togglingId}
+        onEdit={(ep) => navigate(`/endpoints/${ep.id}/edit`)}
+        onDelete={handleDelete}
+        onToggleActive={handleToggle}
+      />
     </div>
   )
 }

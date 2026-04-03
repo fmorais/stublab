@@ -1,27 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '@web/lib/api-client'
-import type { Endpoint, HttpMethod } from '@web/types/endpoint'
+import { apiClient } from '../lib/api-client'
+import type { Endpoint } from '../types/endpoint'
 
-interface Filters {
-  search?: string
-  method?: HttpMethod
-  active?: boolean
+export function useEndpoints() {
+  return useQuery<Endpoint[]>({
+    queryKey: ['endpoints'],
+    queryFn: () =>
+      apiClient
+        .get<{ data: Endpoint[]; total: number }>('/endpoints')
+        .then((res) => res.data),
+  })
 }
 
-interface EndpointsResponse {
-  data: Endpoint[]
-  total: number
-}
-
-export function useEndpoints(filters: Filters = {}) {
-  const params = new URLSearchParams()
-  if (filters.search) params.set('search', filters.search)
-  if (filters.method) params.set('method', filters.method)
-  if (filters.active !== undefined) params.set('active', String(filters.active))
-
-  const query = params.toString()
-  return useQuery<EndpointsResponse>({
-    queryKey: ['endpoints', filters],
-    queryFn: () => apiClient.get<EndpointsResponse>(`/endpoints${query ? `?${query}` : ''}`),
+export function useEndpoint(id: string) {
+  return useQuery<Endpoint>({
+    queryKey: ['endpoints', id],
+    queryFn: () => apiClient.get<Endpoint>(`/endpoints/${id}`),
+    enabled: !!id,
   })
 }

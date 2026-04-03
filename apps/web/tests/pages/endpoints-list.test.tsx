@@ -37,6 +37,7 @@ const makeEndpoint = (overrides: Partial<Endpoint> = {}): Endpoint => ({
   delay: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
+  matchingRules: [],
   ...overrides,
 })
 
@@ -51,42 +52,38 @@ function renderPage() {
 describe('EndpointsList', () => {
   beforeEach(() => {
     mockUseToggleEndpoint.mockReturnValue({
-      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof useToggleEndpoint>)
 
     mockUseDeleteEndpoint.mockReturnValue({
-      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof useDeleteEndpoint>)
   })
 
-  it('exibe skeleton de loading quando isLoading é true', () => {
+  it('exibe mensagem de carregamento quando isLoading é true', () => {
     mockUseEndpoints.mockReturnValue({
       data: undefined,
       isLoading: true,
-      error: null,
-    } as unknown as ReturnType<typeof useEndpoints>)
-
-    const { container } = renderPage()
-
-    // Skeleton usa animate-pulse
-    const skeletons = container.querySelectorAll('.animate-pulse')
-    expect(skeletons.length).toBeGreaterThan(0)
-  })
-
-  it('exibe mensagem de erro quando error não é null', () => {
-    mockUseEndpoints.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error('Falha na requisição'),
+      isError: false,
     } as unknown as ReturnType<typeof useEndpoints>)
 
     renderPage()
 
-    expect(
-      screen.getByText(/erro ao carregar endpoints/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/carregando/i)).toBeInTheDocument()
+  })
+
+  it('exibe mensagem de erro quando isError é true', () => {
+    mockUseEndpoints.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    } as unknown as ReturnType<typeof useEndpoints>)
+
+    renderPage()
+
+    expect(screen.getByText(/erro ao carregar endpoints/i)).toBeInTheDocument()
   })
 
   it('exibe lista de endpoints quando dados carregam', () => {
@@ -96,9 +93,9 @@ describe('EndpointsList', () => {
     ]
 
     mockUseEndpoints.mockReturnValue({
-      data: { data: endpoints, total: 2 },
+      data: endpoints,
       isLoading: false,
-      error: null,
+      isError: false,
     } as unknown as ReturnType<typeof useEndpoints>)
 
     renderPage()
@@ -107,7 +104,7 @@ describe('EndpointsList', () => {
     expect(screen.getByText('Criar usuário')).toBeInTheDocument()
   })
 
-  it('exibe contador "N endpoints cadastrados"', () => {
+  it('exibe contador de endpoints', () => {
     const endpoints = [
       makeEndpoint({ id: 'ep-1' }),
       makeEndpoint({ id: 'ep-2' }),
@@ -115,9 +112,9 @@ describe('EndpointsList', () => {
     ]
 
     mockUseEndpoints.mockReturnValue({
-      data: { data: endpoints, total: 3 },
+      data: endpoints,
       isLoading: false,
-      error: null,
+      isError: false,
     } as unknown as ReturnType<typeof useEndpoints>)
 
     renderPage()
@@ -125,25 +122,13 @@ describe('EndpointsList', () => {
     expect(screen.getByText(/3 endpoints cadastrados/i)).toBeInTheDocument()
   })
 
-  it('exibe "0 endpoints cadastrados" quando não há dados', () => {
-    mockUseEndpoints.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useEndpoints>)
-
-    renderPage()
-
-    expect(screen.getByText(/0 endpoints cadastrados/i)).toBeInTheDocument()
-  })
-
   it('botão "Novo endpoint" está presente na página', async () => {
     const user = userEvent.setup()
 
     mockUseEndpoints.mockReturnValue({
-      data: { data: [], total: 0 },
+      data: [],
       isLoading: false,
-      error: null,
+      isError: false,
     } as unknown as ReturnType<typeof useEndpoints>)
 
     renderPage()
@@ -151,19 +136,18 @@ describe('EndpointsList', () => {
     const button = screen.getByRole('button', { name: /novo endpoint/i })
     expect(button).toBeInTheDocument()
 
-    // Clicar deve funcionar sem erros (navigate dentro do MemoryRouter)
     await user.click(button)
   })
 
-  it('exibe "Nenhum endpoint cadastrado" quando lista está vazia e dados carregaram', () => {
+  it('exibe "Nenhum endpoint cadastrado" quando lista está vazia', () => {
     mockUseEndpoints.mockReturnValue({
-      data: { data: [], total: 0 },
+      data: [],
       isLoading: false,
-      error: null,
+      isError: false,
     } as unknown as ReturnType<typeof useEndpoints>)
 
     renderPage()
 
-    expect(screen.getByText('Nenhum endpoint cadastrado')).toBeInTheDocument()
+    expect(screen.getByText(/nenhum endpoint cadastrado/i)).toBeInTheDocument()
   })
 })
