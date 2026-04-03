@@ -178,4 +178,156 @@ describe('Mock Engine Handler — /mock/*', () => {
 
     await app.close()
   })
+
+  it('request com query param correto aciona endpoint com regra de query', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, {
+      name: 'Query rule endpoint',
+      method: 'GET',
+      path: '/catalog',
+      responseStatus: 200,
+      responseBody: '{"filtered":true}',
+      matchingRules: [
+        { source: 'query', field: 'category', operator: 'eq', value: 'books' },
+      ],
+    })
+
+    const res = await app.inject({ method: 'GET', url: '/mock/catalog?category=books' })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toBe('{"filtered":true}')
+
+    await app.close()
+  })
+
+  it('request sem query param esperado retorna 404 (sem fallback)', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, {
+      name: 'Query rule endpoint',
+      method: 'GET',
+      path: '/catalog',
+      responseStatus: 200,
+      responseBody: '{"filtered":true}',
+      matchingRules: [
+        { source: 'query', field: 'category', operator: 'eq', value: 'books' },
+      ],
+    })
+
+    // Sem o query param correto — regra não satisfeita, nenhum fallback → 404
+    const res = await app.inject({ method: 'GET', url: '/mock/catalog?category=electronics' })
+    expect(res.statusCode).toBe(404)
+    expect(res.json().code).toBe('MOCK_NOT_FOUND')
+
+    await app.close()
+  })
+
+  it('request com header específico aciona endpoint com regra de header', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, {
+      name: 'Header rule endpoint',
+      method: 'GET',
+      path: '/tenant-data',
+      responseStatus: 200,
+      responseBody: '{"tenant":"acme"}',
+      matchingRules: [
+        { source: 'header', field: 'x-tenant-id', operator: 'eq', value: 'acme' },
+      ],
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/mock/tenant-data',
+      headers: { 'x-tenant-id': 'acme' },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toBe('{"tenant":"acme"}')
+
+    await app.close()
+  })
+
+  it('request com header errado retorna 404 (sem fallback)', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, {
+      name: 'Header rule endpoint',
+      method: 'GET',
+      path: '/tenant-data',
+      responseStatus: 200,
+      responseBody: '{"tenant":"acme"}',
+      matchingRules: [
+        { source: 'header', field: 'x-tenant-id', operator: 'eq', value: 'acme' },
+      ],
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/mock/tenant-data',
+      headers: { 'x-tenant-id': 'other' },
+    })
+    expect(res.statusCode).toBe(404)
+    expect(res.json().code).toBe('MOCK_NOT_FOUND')
+
+    await app.close()
+  })
+
+  it('request com body JSON específico aciona endpoint com regra de body', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, {
+      name: 'Body rule endpoint',
+      method: 'POST',
+      path: '/payments',
+      responseStatus: 200,
+      responseBody: '{"method":"pix"}',
+      matchingRules: [
+        { source: 'body', field: 'type', operator: 'eq', value: 'pix' },
+      ],
+    })
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/mock/payments',
+      headers: { 'content-type': 'application/json' },
+      payload: { type: 'pix', amount: 100 },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toBe('{"method":"pix"}')
+
+    await app.close()
+  })
+
+  it('body não-JSON faz regra de body falhar; sem fallback retorna 404', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, {
+      name: 'Body rule endpoint',
+      method: 'POST',
+      path: '/data-upload',
+      responseStatus: 200,
+      responseBody: '{"ok":true}',
+      matchingRules: [
+        { source: 'body', field: 'type', operator: 'eq', value: 'json' },
+      ],
+    })
+
+    // Content-Type não é application/json — body tratado como null
+    const res = await app.inject({
+      method: 'POST',
+      url: '/mock/data-upload',
+      headers: { 'content-type': 'text/plain' },
+      payload: 'type=json',
+    })
+    expect(res.statusCode).toBe(404)
+    expect(res.json().code).toBe('MOCK_NOT_FOUND')
+
+    await app.close()
+  })
 })

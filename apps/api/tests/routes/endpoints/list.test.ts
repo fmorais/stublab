@@ -196,4 +196,22 @@ describe('GET /api/endpoints', () => {
 
     await app.close()
   })
+
+  it('retorna matchingRules em cada endpoint da lista (array, pode ser vazio)', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    await createEndpoint(app, { name: 'Sem regras', method: 'GET', path: '/list-no-rules' })
+
+    const res = await app.inject({ method: 'GET', url: '/api/endpoints' })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.total).toBeGreaterThan(0)
+    for (const endpoint of body.data) {
+      expect(Array.isArray(endpoint.matchingRules)).toBe(true)
+    }
+
+    await app.close()
+  })
 })

@@ -325,3 +325,164 @@ describe('EndpointService.delete', () => {
     expect(result).toBe(false)
   })
 })
+
+describe('EndpointService.create com matchingRules', () => {
+  it('cria endpoint com regras e retorna matchingRules populado', async () => {
+    const result = await EndpointService.create({
+      name: 'Com Regras',
+      method: 'POST',
+      path: '/pagamentos',
+      responseStatus: 200,
+      matchingRules: [
+        { source: 'body', field: 'tipo', operator: 'eq', value: 'PIX' },
+        { source: 'header', field: 'x-tenant-id', operator: 'exists' },
+      ],
+    })
+
+    expect(result.matchingRules).toHaveLength(2)
+    expect(result.matchingRules[0].source).toBe('body')
+    expect(result.matchingRules[0].field).toBe('tipo')
+    expect(result.matchingRules[0].operator).toBe('eq')
+    expect(result.matchingRules[0].value).toBe('PIX')
+    expect(result.matchingRules[0].endpointId).toBe(result.id)
+    expect(result.matchingRules[1].source).toBe('header')
+    expect(result.matchingRules[1].operator).toBe('exists')
+    expect(result.matchingRules[1].value).toBeNull()
+  })
+
+  it('cria endpoint sem matchingRules e retorna matchingRules: []', async () => {
+    const result = await createEndpoint()
+    expect(result.matchingRules).toEqual([])
+  })
+
+  it('cria endpoint com matchingRules vazio e retorna matchingRules: []', async () => {
+    const result = await EndpointService.create({
+      name: 'Sem Regras',
+      method: 'DELETE',
+      path: '/recursos',
+      responseStatus: 204,
+      matchingRules: [],
+    })
+    expect(result.matchingRules).toEqual([])
+  })
+})
+
+describe('EndpointService.findById com matchingRules', () => {
+  it('retorna matchingRules populado para endpoint com regras', async () => {
+    const created = await EndpointService.create({
+      name: 'Com Regras',
+      method: 'POST',
+      path: '/find-test',
+      responseStatus: 200,
+      matchingRules: [
+        { source: 'query', field: 'status', operator: 'eq', value: 'active' },
+      ],
+    })
+
+    const found = await EndpointService.findById(created.id)
+
+    expect(found).not.toBeNull()
+    expect(found!.matchingRules).toHaveLength(1)
+    expect(found!.matchingRules[0].field).toBe('status')
+    expect(found!.matchingRules[0].value).toBe('active')
+    expect(found!.matchingRules[0].endpointId).toBe(created.id)
+  })
+
+  it('retorna matchingRules: [] para endpoint sem regras', async () => {
+    const created = await createEndpoint()
+    const found = await EndpointService.findById(created.id)
+
+    expect(found).not.toBeNull()
+    expect(found!.matchingRules).toEqual([])
+  })
+})
+
+describe('EndpointService.findAll com matchingRules', () => {
+  it('retorna matchingRules em cada endpoint da listagem', async () => {
+    const ep1 = await EndpointService.create({
+      name: 'Ep1',
+      method: 'GET',
+      path: '/list-test-1',
+      responseStatus: 200,
+      matchingRules: [
+        { source: 'query', field: 'env', operator: 'eq', value: 'staging' },
+      ],
+    })
+    await EndpointService.create({
+      name: 'Ep2',
+      method: 'POST',
+      path: '/list-test-2',
+      responseStatus: 201,
+    })
+
+    const result = await EndpointService.findAll()
+    const found1 = result.data.find((e) => e.id === ep1.id)
+    const found2 = result.data.find((e) => e.path === '/list-test-2')
+
+    expect(found1).toBeDefined()
+    expect(found1!.matchingRules).toHaveLength(1)
+    expect(found1!.matchingRules[0].field).toBe('env')
+
+    expect(found2).toBeDefined()
+    expect(found2!.matchingRules).toEqual([])
+  })
+})
+
+describe('EndpointService.update com matchingRules', () => {
+  it('substitui regras existentes quando matchingRules é fornecido', async () => {
+    const created = await EndpointService.create({
+      name: 'Para Atualizar',
+      method: 'PUT',
+      path: '/update-rules',
+      responseStatus: 200,
+      matchingRules: [
+        { source: 'body', field: 'antigo', operator: 'eq', value: 'x' },
+      ],
+    })
+
+    const updated = await EndpointService.update(created.id, {
+      matchingRules: [
+        { source: 'header', field: 'novo', operator: 'exists' },
+        { source: 'query', field: 'outro', operator: 'neq', value: 'z' },
+      ],
+    })
+
+    expect(updated.matchingRules).toHaveLength(2)
+    expect(updated.matchingRules.find((r) => r.field === 'antigo')).toBeUndefined()
+    expect(updated.matchingRules.find((r) => r.field === 'novo')).toBeDefined()
+    expect(updated.matchingRules.find((r) => r.field === 'outro')).toBeDefined()
+  })
+
+  it('remove todas as regras quando matchingRules: []', async () => {
+    const created = await EndpointService.create({
+      name: 'Para Limpar',
+      method: 'PATCH',
+      path: '/clear-rules',
+      responseStatus: 200,
+      matchingRules: [
+        { source: 'body', field: 'campo', operator: 'eq', value: 'valor' },
+      ],
+    })
+
+    const updated = await EndpointService.update(created.id, { matchingRules: [] })
+    expect(updated.matchingRules).toEqual([])
+  })
+
+  it('mantém regras inalteradas quando matchingRules não é fornecido', async () => {
+    const created = await EndpointService.create({
+      name: 'Preservar Regras',
+      method: 'DELETE',
+      path: '/preserve-rules',
+      responseStatus: 204,
+      matchingRules: [
+        { source: 'query', field: 'confirm', operator: 'eq', value: 'yes' },
+      ],
+    })
+
+    const updated = await EndpointService.update(created.id, { name: 'Nome Atualizado' })
+
+    expect(updated.name).toBe('Nome Atualizado')
+    expect(updated.matchingRules).toHaveLength(1)
+    expect(updated.matchingRules[0].field).toBe('confirm')
+  })
+})

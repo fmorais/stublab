@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { db } from '../db/index.js'
 import { endpoints } from '../db/schema.js'
 import type { Endpoint, CreateEndpointInput, UpdateEndpointInput, HttpMethod } from '../types/endpoint.js'
+import { MatchingRuleService } from './matching-rule-service.js'
 
 export class EndpointServiceError extends Error {
   constructor(
@@ -27,6 +28,10 @@ function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
     delay: row.delay,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    // Por que: matchingRules são carregadas separadamente (T08/T09). Aqui o array vazio
+    // garante compatibilidade com a interface — os callers que precisam das regras
+    // devem usar os métodos que populam o campo (a ser implementado em T08/T09).
+    matchingRules: [],
   }
 }
 
@@ -71,7 +76,11 @@ export const EndpointService = {
 
     const [created] = await db.select().from(endpoints).where(eq(endpoints.id, id))
 
-    return rowToEndpoint(created)
+    const rules = input.matchingRules?.length
+      ? await MatchingRuleService.createMany(id, input.matchingRules)
+      : []
+
+    return { ...rowToEndpoint(created), matchingRules: rules }
   },
 
   async findAll(
@@ -100,13 +109,21 @@ export const EndpointService = {
             .where(and(...conditions))
         : await db.select().from(endpoints)
 
-    const data = rows.map(rowToEndpoint)
+    const baseEndpoints = rows.map(rowToEndpoint)
+    const ids = baseEndpoints.map((e) => e.id)
+    const rulesMap = await MatchingRuleService.findByEndpointIds(ids)
+    const data = baseEndpoints.map((e) => ({
+      ...e,
+      matchingRules: rulesMap.get(e.id) ?? [],
+    }))
     return { data, total: data.length }
   },
 
   async findById(id: string): Promise<Endpoint | null> {
     const [row] = await db.select().from(endpoints).where(eq(endpoints.id, id))
-    return row ? rowToEndpoint(row) : null
+    if (!row) return null
+    const rules = await MatchingRuleService.findByEndpointId(id)
+    return { ...rowToEndpoint(row), matchingRules: rules }
   },
 
   async update(id: string, input: UpdateEndpointInput): Promise<Endpoint> {
@@ -163,7 +180,16 @@ export const EndpointService = {
       .where(eq(endpoints.id, id))
 
     const [updated] = await db.select().from(endpoints).where(eq(endpoints.id, id))
-    return rowToEndpoint(updated)
+
+    let rules
+    if (input.matchingRules !== undefined) {
+      await MatchingRuleService.deleteByEndpointId(id)
+      rules = await MatchingRuleService.createMany(id, input.matchingRules)
+    } else {
+      rules = await MatchingRuleService.findByEndpointId(id)
+    }
+
+    return { ...rowToEndpoint(updated), matchingRules: rules }
   },
 
   async toggle(id: string): Promise<Pick<Endpoint, 'id' | 'active' | 'updatedAt'>> {

@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { EndpointService, EndpointServiceError } from '../../services/endpoint-service.js'
+import { matchingRuleSchema } from '../../schemas/matching-rule.js'
 
 const updateBodySchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -10,6 +11,7 @@ const updateBodySchema = z.object({
   responseBody: z.string().optional(),
   responseHeaders: z.record(z.string()).optional(),
   delay: z.number().int().min(0).max(30000).optional(),
+  matchingRules: z.array(matchingRuleSchema).max(20).optional(),
 })
 
 export async function updateEndpointRoute(app: FastifyInstance) {

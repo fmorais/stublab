@@ -246,4 +246,126 @@ describe('POST /api/endpoints', () => {
 
     await app.close()
   })
+
+  it('cria endpoint com matchingRules válidas e retorna 201 com regras no response', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Com regra',
+        method: 'GET',
+        path: '/com-regra',
+        responseStatus: 200,
+        matchingRules: [{ source: 'query', field: 'env', operator: 'eq', value: 'prod' }],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    expect(body.matchingRules).toHaveLength(1)
+    expect(body.matchingRules[0]).toMatchObject({
+      source: 'query',
+      field: 'env',
+      operator: 'eq',
+      value: 'prod',
+    })
+
+    await app.close()
+  })
+
+  it('retorna 400 quando regra usa operator eq sem value', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Regra inválida',
+        method: 'GET',
+        path: '/regra-invalida',
+        responseStatus: 200,
+        matchingRules: [{ source: 'query', field: 'env', operator: 'eq' }],
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('VALIDATION_ERROR')
+
+    await app.close()
+  })
+
+  it('cria endpoint com matchingRules vazio e retorna 201 com matchingRules: []', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Sem regras',
+        method: 'GET',
+        path: '/sem-regras',
+        responseStatus: 200,
+        matchingRules: [],
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json().matchingRules).toEqual([])
+
+    await app.close()
+  })
+
+  it('cria endpoint sem o campo matchingRules e retorna 201 com matchingRules: []', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Sem campo',
+        method: 'GET',
+        path: '/sem-campo',
+        responseStatus: 200,
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json().matchingRules).toEqual([])
+
+    await app.close()
+  })
+
+  it('retorna 400 quando matchingRules contém mais de 20 regras', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const rules = Array.from({ length: 21 }, (_, i) => ({
+      source: 'query',
+      field: `field${i}`,
+      operator: 'exists',
+    }))
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Muitas regras',
+        method: 'GET',
+        path: '/muitas-regras',
+        responseStatus: 200,
+        matchingRules: rules,
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('VALIDATION_ERROR')
+
+    await app.close()
+  })
 })

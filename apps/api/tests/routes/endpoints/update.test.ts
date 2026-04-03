@@ -142,4 +142,107 @@ describe('PUT /api/endpoints/:id', () => {
 
     await app.close()
   })
+
+  it('substitui matchingRules quando o campo é fornecido no PUT', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Com regra original',
+        method: 'GET',
+        path: '/regra-original',
+        responseStatus: 200,
+        matchingRules: [{ source: 'query', field: 'env', operator: 'eq', value: 'dev' }],
+      },
+    })
+    const { id } = created.json()
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/endpoints/${id}`,
+      payload: {
+        matchingRules: [{ source: 'header', field: 'x-tenant-id', operator: 'exists' }],
+      },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.matchingRules).toHaveLength(1)
+    expect(body.matchingRules[0]).toMatchObject({
+      source: 'header',
+      field: 'x-tenant-id',
+      operator: 'exists',
+    })
+
+    await app.close()
+  })
+
+  it('remove matchingRules quando o campo é fornecido como array vazio', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Com regra para remover',
+        method: 'GET',
+        path: '/regra-remover',
+        responseStatus: 200,
+        matchingRules: [{ source: 'query', field: 'env', operator: 'eq', value: 'prod' }],
+      },
+    })
+    const { id } = created.json()
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/endpoints/${id}`,
+      payload: { matchingRules: [] },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json().matchingRules).toEqual([])
+
+    await app.close()
+  })
+
+  it('mantém matchingRules existentes quando o campo não é fornecido no PUT', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints',
+      payload: {
+        name: 'Com regra mantida',
+        method: 'GET',
+        path: '/regra-mantida',
+        responseStatus: 200,
+        matchingRules: [{ source: 'body', field: 'tipo', operator: 'eq', value: 'PIX' }],
+      },
+    })
+    const { id } = created.json()
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/endpoints/${id}`,
+      payload: { name: 'Nome atualizado' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.name).toBe('Nome atualizado')
+    expect(body.matchingRules).toHaveLength(1)
+    expect(body.matchingRules[0]).toMatchObject({
+      source: 'body',
+      field: 'tipo',
+      operator: 'eq',
+      value: 'PIX',
+    })
+
+    await app.close()
+  })
 })
