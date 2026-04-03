@@ -37,22 +37,35 @@ function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
 
 export const EndpointService = {
   async create(input: CreateEndpointInput): Promise<Endpoint> {
-    const existing = await db
-      .select()
-      .from(endpoints)
-      .where(
-        and(
-          eq(endpoints.method, input.method),
-          eq(endpoints.path, input.path),
-          eq(endpoints.active, true),
-        ),
-      )
+    // Por que: só é conflito quando o novo endpoint NÃO tem regras (seria um segundo fallback).
+    // Endpoints com regras podem coexistir no mesmo method+path — é o caso de uso central da spec-002.
+    const incomingHasRules = (input.matchingRules?.length ?? 0) > 0
 
-    if (existing.length > 0) {
-      throw new EndpointServiceError(
-        'CONFLICT',
-        `Já existe um endpoint ativo com o método ${input.method} e path ${input.path}`,
-      )
+    if (!incomingHasRules) {
+      const existingFallbacks = await db
+        .select({ id: endpoints.id })
+        .from(endpoints)
+        .where(
+          and(
+            eq(endpoints.method, input.method),
+            eq(endpoints.path, input.path),
+            eq(endpoints.active, true),
+          ),
+        )
+
+      // Filtra apenas os que não têm regras (fallbacks)
+      const fallbackIds = existingFallbacks.map((e) => e.id)
+      if (fallbackIds.length > 0) {
+        const existingRules = await MatchingRuleService.findByEndpointIds(fallbackIds)
+        const hasFallback = fallbackIds.some((id) => (existingRules.get(id) ?? []).length === 0)
+
+        if (hasFallback) {
+          throw new EndpointServiceError(
+            'CONFLICT',
+            `Já existe um endpoint ativo sem regras com o método ${input.method} e path ${input.path}`,
+          )
+        }
+      }
     }
 
     const now = new Date().toISOString()
@@ -141,24 +154,39 @@ export const EndpointService = {
       (input.path !== undefined && input.path !== existing.path)
 
     if (isMethodOrPathChanging && existing.active) {
-      const conflict = await db
-        .select()
-        .from(endpoints)
-        .where(
-          and(
-            eq(endpoints.method, newMethod),
-            eq(endpoints.path, newPath),
-            eq(endpoints.active, true),
-            ne(endpoints.id, id),
-          ),
-        )
+      // Determina se o endpoint resultante terá regras (considera as novas ou as existentes)
+      const updatedRules = input.matchingRules !== undefined
+        ? input.matchingRules
+        : await MatchingRuleService.findByEndpointId(id)
+      const updatedHasRules = updatedRules.length > 0
 
-      if (conflict.length > 0) {
-        throw new EndpointServiceError(
-          'CONFLICT',
-          `Já existe um endpoint ativo com o método ${newMethod} e path ${newPath}`,
-        )
+      if (!updatedHasRules) {
+        // Sem regras → verifica se já existe outro fallback no destino
+        const candidates = await db
+          .select({ id: endpoints.id })
+          .from(endpoints)
+          .where(
+            and(
+              eq(endpoints.method, newMethod),
+              eq(endpoints.path, newPath),
+              eq(endpoints.active, true),
+              ne(endpoints.id, id),
+            ),
+          )
+
+        if (candidates.length > 0) {
+          const rulesMap = await MatchingRuleService.findByEndpointIds(candidates.map((c) => c.id))
+          const hasFallback = candidates.some((c) => (rulesMap.get(c.id) ?? []).length === 0)
+
+          if (hasFallback) {
+            throw new EndpointServiceError(
+              'CONFLICT',
+              `Já existe um endpoint ativo sem regras com o método ${newMethod} e path ${newPath}`,
+            )
+          }
+        }
       }
+      // Com regras → pode coexistir livremente com outros endpoints no mesmo method+path
     }
 
     const now = new Date().toISOString()
@@ -202,23 +230,34 @@ export const EndpointService = {
     const newActive = !existing.active
 
     if (newActive) {
-      const conflict = await db
-        .select()
-        .from(endpoints)
-        .where(
-          and(
-            eq(endpoints.method, existing.method),
-            eq(endpoints.path, existing.path),
-            eq(endpoints.active, true),
-            ne(endpoints.id, id),
-          ),
-        )
+      const currentRules = await MatchingRuleService.findByEndpointId(id)
+      const hasRules = currentRules.length > 0
 
-      if (conflict.length > 0) {
-        throw new EndpointServiceError(
-          'CONFLICT',
-          `Já existe um endpoint ativo com o método ${existing.method} e path ${existing.path}`,
-        )
+      if (!hasRules) {
+        // Fallback ativando → verifica se já existe outro fallback ativo no mesmo method+path
+        const candidates = await db
+          .select({ id: endpoints.id })
+          .from(endpoints)
+          .where(
+            and(
+              eq(endpoints.method, existing.method),
+              eq(endpoints.path, existing.path),
+              eq(endpoints.active, true),
+              ne(endpoints.id, id),
+            ),
+          )
+
+        if (candidates.length > 0) {
+          const rulesMap = await MatchingRuleService.findByEndpointIds(candidates.map((c) => c.id))
+          const hasFallback = candidates.some((c) => (rulesMap.get(c.id) ?? []).length === 0)
+
+          if (hasFallback) {
+            throw new EndpointServiceError(
+              'CONFLICT',
+              `Já existe um endpoint ativo sem regras com o método ${existing.method} e path ${existing.path}`,
+            )
+          }
+        }
       }
     }
 

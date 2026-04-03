@@ -13,11 +13,16 @@ export function EndpointsList() {
   const deleteMutation = useDeleteEndpoint()
   const toggleMutation = useToggleEndpoint()
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
   async function handleToggle(endpoint: Endpoint) {
     setTogglingId(endpoint.id)
+    setToggleError(null)
     try {
       await toggleMutation.mutateAsync(endpoint.id)
+    } catch (err) {
+      const message = (err as { message?: string })?.message ?? 'Erro ao alterar status do endpoint.'
+      setToggleError(message)
     } finally {
       setTogglingId(null)
     }
@@ -57,6 +62,13 @@ export function EndpointsList() {
           + Novo endpoint
         </Button>
       </div>
+
+      {toggleError && (
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>{toggleError}</span>
+          <button type="button" onClick={() => setToggleError(null)} className="ml-4 text-red-400 hover:text-red-600 font-medium">✕</button>
+        </div>
+      )}
 
       <EndpointTable
         endpoints={endpoints}
