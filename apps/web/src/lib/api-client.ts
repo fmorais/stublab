@@ -20,7 +20,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const error = await response.json().catch(() => ({ error: 'Unknown error', code: 'UNKNOWN' }))
     throw Object.assign(new Error(error.error ?? 'Request failed'), {
       status: response.status,
-      code: error.code,
+      code: error.code ?? 'UNKNOWN',
     })
   }
 
