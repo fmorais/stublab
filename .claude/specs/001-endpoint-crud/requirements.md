@@ -1,6 +1,6 @@
 # Spec 001 — Cadastro e gerenciamento de endpoints
 
-**Status:** aguardando design (@architect)
+**Status:** concluído
 **Agente responsável pelo design:** @architect
 **Criado em:** 2025-04
 

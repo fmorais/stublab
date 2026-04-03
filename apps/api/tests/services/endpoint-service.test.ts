@@ -2,11 +2,10 @@ import { beforeEach, describe, it, expect, vi } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import * as schema from '../../src/db/schema.js'
 
-type TestDb = ReturnType<typeof drizzle<typeof schema>>
-
-let testDb: TestDb
+let testDb: BetterSQLite3Database<typeof schema>
 
 vi.mock('../../src/db/index.js', () => ({
   get db() {
