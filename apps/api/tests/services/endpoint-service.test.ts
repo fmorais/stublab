@@ -145,6 +145,13 @@ describe('EndpointService.findAll', () => {
     expect(result.total).toBe(1)
     expect(result.data[0].active).toBe(false)
   })
+
+  it('filtra combinando search e method', async () => {
+    const result = await EndpointService.findAll({ search: 'usuário', method: 'POST' })
+    expect(result.total).toBe(1)
+    expect(result.data[0].name).toBe('Criar usuário')
+    expect(result.data[0].method).toBe('POST')
+  })
 })
 
 describe('EndpointService.findById', () => {
@@ -222,6 +229,24 @@ describe('EndpointService.update', () => {
     const updated = await EndpointService.update(created.id, { method: 'GET', path: '/mine' })
     expect(updated.method).toBe('GET')
     expect(updated.path).toBe('/mine')
+  })
+
+  it('não verifica conflito ao mudar method+path em endpoint inativo', async () => {
+    // Cria endpoint ativo com GET /inativo-test
+    await createEndpoint({ method: 'GET', path: '/inativo-test' })
+
+    // Cria segundo endpoint, desativa-o
+    const inactive = await createEndpoint({ method: 'POST', path: '/inactive-path' })
+    await EndpointService.toggle(inactive.id)
+
+    // Mudar o inativo para GET /inativo-test não deve lançar CONFLICT
+    const updated = await EndpointService.update(inactive.id, {
+      method: 'GET',
+      path: '/inativo-test',
+    })
+    expect(updated.method).toBe('GET')
+    expect(updated.path).toBe('/inativo-test')
+    expect(updated.active).toBe(false)
   })
 })
 

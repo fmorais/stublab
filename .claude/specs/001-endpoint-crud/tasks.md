@@ -75,32 +75,32 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Backend — Rotas Admin API
 
-- [ ] **T09** [M] @backend-dev — Implementar POST /api/endpoints
+- [x] **T09** [M] @backend-dev — Implementar POST /api/endpoints
   - Arquivo: `apps/api/src/routes/endpoints/create.ts`
   - Validação Zod; retorna 201, 400 ou 409
   - Critério: testes de integração — caso feliz + validação inválida + conflito
 
-- [ ] **T10** [S] @backend-dev — Implementar GET /api/endpoints
+- [x] **T10** [S] @backend-dev — Implementar GET /api/endpoints
   - Arquivo: `apps/api/src/routes/endpoints/list.ts`
   - Query params: `search`, `method`, `active`
   - Critério: testes de integração — lista vazia, com itens, com filtros
 
-- [ ] **T11** [S] @backend-dev — Implementar GET /api/endpoints/:id
+- [x] **T11** [S] @backend-dev — Implementar GET /api/endpoints/:id
   - Arquivo: `apps/api/src/routes/endpoints/get.ts`
   - Retorna 404 se não existe
   - Critério: testes de integração — encontrado + não encontrado
 
-- [ ] **T12** [M] @backend-dev — Implementar PUT /api/endpoints/:id
+- [x] **T12** [M] @backend-dev — Implementar PUT /api/endpoints/:id
   - Arquivo: `apps/api/src/routes/endpoints/update.ts`
   - Validação Zod; retorna 200, 400, 404 ou 409
   - Critério: testes de integração — caso feliz + não encontrado + conflito
 
-- [ ] **T13** [S] @backend-dev — Implementar PATCH /api/endpoints/:id/toggle
+- [x] **T13** [S] @backend-dev — Implementar PATCH /api/endpoints/:id/toggle
   - Arquivo: `apps/api/src/routes/endpoints/toggle.ts`
   - Retorna 409 se conflito ao ativar
   - Critério: testes de integração — ativar, desativar, conflito ao ativar
 
-- [ ] **T14** [S] @backend-dev — Implementar DELETE /api/endpoints/:id
+- [x] **T14** [S] @backend-dev — Implementar DELETE /api/endpoints/:id
   - Arquivo: `apps/api/src/routes/endpoints/delete.ts`
   - Retorna 204 ou 404
   - Critério: testes de integração — deletado + não encontrado
