@@ -10,7 +10,8 @@
       "Bash(node-gyp:*)",
       "Bash(pnpm db:generate)",
       "Bash(pnpm db:migrate)",
-      "Bash(./node_modules/.bin/tsc --noEmit)"
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(pnpm exec:*)"
     ]
   }
 }

@@ -3,6 +3,7 @@
 **Spec:** 001-endpoint-crud
 **Design aprovado em:** 2026-04-02
 **Total estimado:** ~20-25h
+**Premissas?** Sempre que uma tarefa for concluída, deve ser marcado o checkbox relacionado para melhor controle do que foi implementado.
 
 ---
 
@@ -10,19 +11,19 @@
 
 O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
-- [ ] **T00a** [M] @backend-dev — Inicializar monorepo com pnpm workspaces
+- [x] **T00a** [M] @backend-dev — Inicializar monorepo com pnpm workspaces
   - Criar `pnpm-workspace.yaml`, `package.json` raiz, `tsconfig.json` base
   - Critério: `pnpm install` funciona sem erros
 
-- [ ] **T00b** [M] @backend-dev — Criar estrutura do app `api`
+- [x] **T00b** [M] @backend-dev — Criar estrutura do app `api`
   - Criar `apps/api/` com package.json, tsconfig.json, Fastify configurado com `@fastify/cors`
   - Critério: `pnpm --filter api dev` sobe servidor em localhost:3000
 
-- [ ] **T00c** [M] @frontend-dev — Criar estrutura do app `web`
+- [x] **T00c** [M] @frontend-dev — Criar estrutura do app `web`
   - Criar `apps/web/` com Vite + React + TypeScript + Tailwind + shadcn/ui
   - Critério: `pnpm --filter web dev` sobe em localhost:5173
 
-- [ ] **T00d** [S] @backend-dev — Configurar Drizzle ORM com SQLite
+- [x] **T00d** [S] @backend-dev — Configurar Drizzle ORM com SQLite
   - Criar `apps/api/src/db/index.ts` e `drizzle.config.ts`
   - Critério: conexão com SQLite funcionando, scripts `db:generate`, `db:migrate`, `db:studio` no package.json
 
@@ -30,12 +31,12 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Backend — Schema e Migrations
 
-- [ ] **T01** [S] @backend-dev — Criar schema da tabela `endpoints`
+- [x] **T01** [S] @backend-dev — Criar schema da tabela `endpoints`
   - Arquivo: `apps/api/src/db/schema.ts`
   - Campos conforme design.md; índice único em (method, path) para endpoints ativos
   - Critério: `pnpm db:generate` cria migration, `pnpm db:migrate` aplica sem erros
 
-- [ ] **T02** [S] @backend-dev — Criar tipos TypeScript do domínio
+- [x] **T02** [S] @backend-dev — Criar tipos TypeScript do domínio
   - Arquivo: `apps/api/src/types/endpoint.ts`
   - Exportar `Endpoint`, `CreateEndpointInput`, `UpdateEndpointInput`, `HttpMethod`
   - Critério: tipos compilam sem erros em strict mode
