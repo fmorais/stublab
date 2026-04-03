@@ -6,6 +6,7 @@ import { getEndpointRoute } from './routes/endpoints/get.js'
 import { updateEndpointRoute } from './routes/endpoints/update.js'
 import { toggleEndpointRoute } from './routes/endpoints/toggle.js'
 import { deleteEndpointRoute } from './routes/endpoints/delete.js'
+import { mockHandler } from './mock/handler.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -26,6 +27,8 @@ export async function buildApp() {
     await api.register(toggleEndpointRoute)
     await api.register(deleteEndpointRoute)
   }, { prefix: '/api' })
+
+  await app.register(mockHandler)
 
   return app
 }

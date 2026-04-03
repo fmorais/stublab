@@ -109,13 +109,13 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Backend — Mock Engine
 
-- [ ] **T15** [M] @backend-dev — Implementar mock engine core
+- [x] **T15** [M] @backend-dev — Implementar mock engine core
   - Arquivo: `apps/api/src/mock/engine.ts`
   - Função `matchEndpoint(method, path, endpoints[])` com suporte a params dinâmicos (`:param`)
   - Ordenação por especificidade: paths estáticos têm prioridade sobre paths com params
   - Critério: testes unitários cobrindo match exato, param único, multi-param, sem match
 
-- [ ] **T16** [M] @backend-dev — Registrar handler wildcard /mock/*
+- [x] **T16** [M] @backend-dev — Registrar handler wildcard /mock/*
   - Arquivo: `apps/api/src/mock/handler.ts`
   - Busca endpoints ativos, usa engine para matching, aplica delay, retorna response configurado
   - Retorna `{ error: "No mock found", code: "MOCK_NOT_FOUND" }` com 404 se sem match
