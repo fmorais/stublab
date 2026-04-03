@@ -23,15 +23,15 @@ describe('EndpointForm', () => {
     expect(screen.getByPlaceholderText('200')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('0')).toBeInTheDocument()
 
-    // Textarea por placeholder
-    expect(screen.getAllByPlaceholderText('{}').length).toBeGreaterThanOrEqual(1)
+    // Textarea de body
+    expect(screen.getByPlaceholderText(/\{"status"/)).toBeInTheDocument()
 
-    // Select de método por texto visível
-    expect(screen.getByDisplayValue('GET')).toBeInTheDocument()
+    // Método padrão GET visível no select (pode haver múltiplos por Radix Select)
+    expect(screen.getAllByText('GET').length).toBeGreaterThanOrEqual(1)
   })
 
   it('exibe mensagem de erro quando prop error é passada', () => {
-    renderForm({ onSubmit: vi.fn(), error: 'Erro de conflito na API' })
+    renderForm({ onSubmit: vi.fn(), error: 'Erro de conflito na API', isError: true })
     expect(screen.getByText('Erro de conflito na API')).toBeInTheDocument()
   })
 
@@ -94,8 +94,7 @@ describe('EndpointForm', () => {
 
   it('campo method inicia com "GET" por padrão', () => {
     renderForm({ onSubmit: vi.fn() })
-    const select = screen.getByDisplayValue('GET') as HTMLSelectElement
-    expect(select.value).toBe('GET')
+    expect(screen.getAllByText('GET').length).toBeGreaterThanOrEqual(1)
   })
 
   it('defaultValues preenche o formulário corretamente', () => {
@@ -112,7 +111,7 @@ describe('EndpointForm', () => {
     renderForm({ onSubmit: vi.fn(), defaultValues })
 
     expect((screen.getByPlaceholderText(/Ex: Listar usuários/i) as HTMLInputElement).value).toBe('Meu endpoint')
-    expect((screen.getByDisplayValue('POST') as HTMLSelectElement).value).toBe('POST')
+    expect(screen.getAllByText('POST').length).toBeGreaterThanOrEqual(1)
     expect((screen.getByPlaceholderText('/api/users/:id') as HTMLInputElement).value).toBe('/meu/path')
     expect((screen.getByPlaceholderText('200') as HTMLInputElement).value).toBe('201')
     expect((screen.getByPlaceholderText('0') as HTMLInputElement).value).toBe('500')
@@ -123,8 +122,8 @@ describe('EndpointForm', () => {
     expect(screen.getByRole('button', { name: /criar endpoint/i })).toBeInTheDocument()
   })
 
-  it('exibe "Salvando..." quando isLoading é true', () => {
-    renderForm({ onSubmit: vi.fn(), isLoading: true })
+  it('exibe "Salvando..." quando isPending é true', () => {
+    renderForm({ onSubmit: vi.fn(), isPending: true })
     expect(screen.getByRole('button', { name: /salvando/i })).toBeInTheDocument()
   })
 })

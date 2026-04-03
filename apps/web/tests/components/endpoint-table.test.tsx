@@ -1,23 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { EndpointTable } from '@web/components/endpoint-table'
 import type { Endpoint } from '@web/types/endpoint'
-
-vi.mock('@web/hooks/use-toggle-endpoint', () => ({
-  useToggleEndpoint: vi.fn(),
-}))
-
-vi.mock('@web/hooks/use-delete-endpoint', () => ({
-  useDeleteEndpoint: vi.fn(),
-}))
-
-import { useToggleEndpoint } from '@web/hooks/use-toggle-endpoint'
-import { useDeleteEndpoint } from '@web/hooks/use-delete-endpoint'
-
-const mockUseToggleEndpoint = vi.mocked(useToggleEndpoint)
-const mockUseDeleteEndpoint = vi.mocked(useDeleteEndpoint)
 
 const makeEndpoint = (overrides: Partial<Endpoint> = {}): Endpoint => ({
   id: 'ep-1',
@@ -31,30 +17,19 @@ const makeEndpoint = (overrides: Partial<Endpoint> = {}): Endpoint => ({
   delay: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
+  matchingRules: [],
   ...overrides,
 })
 
-function renderTable(endpoints: Endpoint[]) {
+function renderTable(endpoints: Endpoint[], props: Partial<Parameters<typeof EndpointTable>[0]> = {}) {
   return render(
     <MemoryRouter>
-      <EndpointTable endpoints={endpoints} />
+      <EndpointTable endpoints={endpoints} {...props} />
     </MemoryRouter>,
   )
 }
 
 describe('EndpointTable', () => {
-  beforeEach(() => {
-    mockUseToggleEndpoint.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof useToggleEndpoint>)
-
-    mockUseDeleteEndpoint.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as unknown as ReturnType<typeof useDeleteEndpoint>)
-  })
-
   it('renderiza lista de endpoints com nome, método e path', () => {
     const endpoints = [
       makeEndpoint({ id: 'ep-1', name: 'Listar usuários', method: 'GET', path: '/api/users' }),
@@ -70,51 +45,45 @@ describe('EndpointTable', () => {
     expect(screen.getAllByText('/api/users')).toHaveLength(2)
   })
 
-  it('exibe "Nenhum endpoint cadastrado" quando lista está vazia', () => {
+  it('exibe mensagem quando lista está vazia', () => {
     renderTable([])
-    expect(screen.getByText('Nenhum endpoint cadastrado')).toBeInTheDocument()
+    expect(screen.getByText(/nenhum endpoint cadastrado/i)).toBeInTheDocument()
   })
 
-  it('botão toggle chama mutate com o ID correto', async () => {
+  it('botão toggle chama onToggleActive com o endpoint correto', async () => {
     const user = userEvent.setup()
-    const mutateMock = vi.fn()
+    const onToggleActive = vi.fn()
+    const endpoint = makeEndpoint({ id: 'ep-42' })
 
-    mockUseToggleEndpoint.mockReturnValue({
-      mutate: mutateMock,
-      isPending: false,
-    } as unknown as ReturnType<typeof useToggleEndpoint>)
+    renderTable([endpoint], { onToggleActive })
 
-    renderTable([makeEndpoint({ id: 'ep-42' })])
+    await user.click(screen.getByRole('button', { name: /desativar|ativar/i }))
 
-    const toggleButton = screen.getByRole('switch')
-    await user.click(toggleButton)
-
-    expect(mutateMock).toHaveBeenCalledWith('ep-42', expect.any(Object))
+    expect(onToggleActive).toHaveBeenCalledWith(endpoint)
   })
 
-  it('botão "Deletar" abre o DeleteConfirmDialog', async () => {
+  it('botão "Excluir" chama onDelete com o endpoint correto', async () => {
     const user = userEvent.setup()
+    const onDelete = vi.fn()
+    const endpoint = makeEndpoint({ name: 'Endpoint para deletar' })
 
-    renderTable([makeEndpoint({ name: 'Endpoint para deletar' })])
+    renderTable([endpoint], { onDelete })
 
-    await user.click(screen.getByRole('button', { name: /deletar/i }))
+    await user.click(screen.getByRole('button', { name: /excluir/i }))
 
-    await waitFor(() => {
-      expect(screen.getByText(/deletar endpoint/i)).toBeInTheDocument()
-      expect(screen.getByText(/"Endpoint para deletar"/)).toBeInTheDocument()
-    })
+    expect(onDelete).toHaveBeenCalledWith(endpoint)
   })
 
-  it('botão "Editar" navega para /endpoints/:id/edit', async () => {
+  it('botão "Editar" chama onEdit com o endpoint correto', async () => {
     const user = userEvent.setup()
+    const onEdit = vi.fn()
+    const endpoint = makeEndpoint({ id: 'ep-99' })
 
-    renderTable([makeEndpoint({ id: 'ep-99' })])
+    renderTable([endpoint], { onEdit })
 
     await user.click(screen.getByRole('button', { name: /editar/i }))
 
-    // A navegação no MemoryRouter não causa erro — o botão apenas chama navigate()
-    // Verificamos que o botão existe e é clicável
-    expect(screen.getByRole('button', { name: /editar/i })).toBeInTheDocument()
+    expect(onEdit).toHaveBeenCalledWith(endpoint)
   })
 
   it('renderiza o status HTTP de cada endpoint', () => {
@@ -129,16 +98,22 @@ describe('EndpointTable', () => {
     expect(screen.getByText('404')).toBeInTheDocument()
   })
 
-  it('switch reflete o estado active do endpoint', () => {
-    const endpoints = [
-      makeEndpoint({ id: 'ep-1', active: true }),
-      makeEndpoint({ id: 'ep-2', active: false }),
-    ]
+  it('exibe badge de regras quando endpoint tem matchingRules', () => {
+    const endpoint = makeEndpoint({
+      matchingRules: [
+        { id: 'r1', endpointId: 'ep-1', source: 'query', field: 'env', operator: 'eq', value: 'prod', createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'r2', endpointId: 'ep-1', source: 'header', field: 'x-tenant', operator: 'exists', value: null, createdAt: '2026-01-01T00:00:00.000Z' },
+      ],
+    })
 
-    renderTable(endpoints)
+    renderTable([endpoint])
 
-    const switches = screen.getAllByRole('switch')
-    expect(switches[0]).toHaveAttribute('aria-checked', 'true')
-    expect(switches[1]).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByText('2 regras')).toBeInTheDocument()
+  })
+
+  it('não exibe badge quando endpoint não tem regras', () => {
+    renderTable([makeEndpoint({ matchingRules: [] })])
+
+    expect(screen.queryByText(/regra/i)).not.toBeInTheDocument()
   })
 })

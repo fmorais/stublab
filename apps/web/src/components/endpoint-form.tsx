@@ -61,7 +61,9 @@ interface EndpointFormProps {
   onSubmit: (data: CreateEndpointInput | UpdateEndpointInput) => void
   onCancel?: () => void
   isPending?: boolean
+  isLoading?: boolean   // alias para isPending (compatibilidade spec-001)
   isError?: boolean
+  error?: string | null // alias para errorMessage (compatibilidade spec-001)
   errorMessage?: string
   submitLabel?: string
 }
@@ -71,10 +73,14 @@ export function EndpointForm({
   onSubmit,
   onCancel,
   isPending = false,
+  isLoading = false,
   isError = false,
+  error,
   errorMessage,
   submitLabel = 'Salvar endpoint',
 }: EndpointFormProps) {
+  const pending = isPending || isLoading
+  const displayError = errorMessage ?? (error ?? undefined)
   const {
     register,
     handleSubmit,
@@ -162,9 +168,9 @@ export function EndpointForm({
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {isError && errorMessage && (
+      {(isError || displayError) && displayError && (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {errorMessage}
+          {displayError}
         </div>
       )}
 
@@ -173,7 +179,7 @@ export function EndpointForm({
         <Label htmlFor="name">Nome</Label>
         <Input
           id="name"
-          placeholder="ex: Listar usuários"
+          placeholder="Ex: Listar usuários"
           aria-invalid={!!errors.name}
           {...register('name')}
         />
@@ -212,7 +218,7 @@ export function EndpointForm({
           <Label htmlFor="path">Path</Label>
           <Input
             id="path"
-            placeholder="/api/usuarios"
+            placeholder="/api/users/:id"
             aria-invalid={!!errors.path}
             {...register('path')}
           />
@@ -302,8 +308,8 @@ export function EndpointForm({
             Cancelar
           </Button>
         )}
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Salvando...' : submitLabel}
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Salvando...' : submitLabel}
         </Button>
       </div>
     </form>
