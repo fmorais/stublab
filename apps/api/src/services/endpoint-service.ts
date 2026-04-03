@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { db } from '../db/index.js'
 import { endpoints } from '../db/schema.js'
 import type { Endpoint, CreateEndpointInput, UpdateEndpointInput, HttpMethod } from '../types/endpoint.js'
+import { rowToEndpoint } from '../lib/mappers.js'
 
 export class EndpointServiceError extends Error {
   constructor(
@@ -11,22 +12,6 @@ export class EndpointServiceError extends Error {
   ) {
     super(message)
     this.name = 'EndpointServiceError'
-  }
-}
-
-function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
-  return {
-    id: row.id,
-    name: row.name,
-    method: row.method as HttpMethod,
-    path: row.path,
-    active: row.active,
-    responseStatus: row.responseStatus,
-    responseBody: row.responseBody,
-    responseHeaders: (row.responseHeaders ?? {}) as Record<string, string>,
-    delay: row.delay,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
   }
 }
 

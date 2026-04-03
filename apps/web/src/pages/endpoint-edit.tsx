@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { EndpointForm } from '@web/components/endpoint-form'
 import { DeleteConfirmDialog } from '@web/components/delete-confirm-dialog'
 import { useEndpoint } from '@web/hooks/use-endpoint'
@@ -12,8 +12,12 @@ export function EndpointEdit() {
   const navigate = useNavigate()
   const [showDelete, setShowDelete] = useState(false)
 
-  const { data: endpoint, isLoading, error: loadError } = useEndpoint(id!)
-  const updateMutation = useUpdateEndpoint(id!)
+  if (!id) {
+    return <Navigate to="/" replace />
+  }
+
+  const { data: endpoint, isLoading, error: loadError } = useEndpoint(id)
+  const updateMutation = useUpdateEndpoint(id)
   const deleteMutation = useDeleteEndpoint()
 
   function handleSubmit(data: CreateEndpointInput | UpdateEndpointInput) {
@@ -86,7 +90,7 @@ export function EndpointEdit() {
         onOpenChange={setShowDelete}
         endpointName={endpoint.name}
         onConfirm={() => {
-          deleteMutation.mutate(id!, {
+          deleteMutation.mutate(id, {
             onSuccess: () => navigate('/'),
           })
         }}

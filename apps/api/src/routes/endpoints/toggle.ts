@@ -1,9 +1,18 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { EndpointService, EndpointServiceError } from '../../services/endpoint-service.js'
+
+const paramsSchema = z.object({
+  id: z.string().uuid('ID deve ser um UUID válido'),
+})
 
 export async function toggleEndpointRoute(app: FastifyInstance) {
   app.patch('/endpoints/:id/toggle', async (request, reply) => {
-    const { id } = request.params as { id: string }
+    const params = paramsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.status(400).send({ error: 'ID inválido', code: 'VALIDATION_ERROR' })
+    }
+    const { id } = params.data
 
     try {
       const result = await EndpointService.toggle(id)

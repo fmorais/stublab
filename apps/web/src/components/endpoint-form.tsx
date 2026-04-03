@@ -79,8 +79,9 @@ export function EndpointForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+          <label htmlFor="ep-name" className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
           <input
+            id="ep-name"
             {...register('name')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ex: Listar usuários"
@@ -89,8 +90,9 @@ export function EndpointForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Método</label>
+          <label htmlFor="ep-method" className="block text-sm font-medium text-gray-700 mb-1">Método</label>
           <select
+            id="ep-method"
             {...register('method')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -104,8 +106,9 @@ export function EndpointForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Path</label>
+          <label htmlFor="ep-path" className="block text-sm font-medium text-gray-700 mb-1">Path</label>
           <input
+            id="ep-path"
             {...register('path')}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="/api/users/:id"
@@ -114,8 +117,9 @@ export function EndpointForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status HTTP</label>
+          <label htmlFor="ep-response-status" className="block text-sm font-medium text-gray-700 mb-1">Status HTTP</label>
           <input
+            id="ep-response-status"
             {...register('responseStatus')}
             type="number"
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -127,8 +131,9 @@ export function EndpointForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Delay (ms)</label>
+          <label htmlFor="ep-delay" className="block text-sm font-medium text-gray-700 mb-1">Delay (ms)</label>
           <input
+            id="ep-delay"
             {...register('delay')}
             type="number"
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -138,8 +143,9 @@ export function EndpointForm({
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Response Body</label>
+          <label htmlFor="ep-response-body" className="block text-sm font-medium text-gray-700 mb-1">Response Body</label>
           <textarea
+            id="ep-response-body"
             {...register('responseBody')}
             rows={6}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -151,10 +157,11 @@ export function EndpointForm({
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="ep-response-headers" className="block text-sm font-medium text-gray-700 mb-1">
             Response Headers (JSON)
           </label>
           <textarea
+            id="ep-response-headers"
             {...register('responseHeaders')}
             rows={3}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"

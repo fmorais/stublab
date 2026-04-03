@@ -2,6 +2,10 @@ import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { EndpointService, EndpointServiceError } from '../../services/endpoint-service.js'
 
+const paramsSchema = z.object({
+  id: z.string().uuid('ID deve ser um UUID válido'),
+})
+
 const updateBodySchema = z.object({
   name: z.string().min(1).max(100).optional(),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional(),
@@ -14,7 +18,11 @@ const updateBodySchema = z.object({
 
 export async function updateEndpointRoute(app: FastifyInstance) {
   app.put('/endpoints/:id', async (request, reply) => {
-    const { id } = request.params as { id: string }
+    const params = paramsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.status(400).send({ error: 'ID inválido', code: 'VALIDATION_ERROR' })
+    }
+    const { id } = params.data
 
     const body = updateBodySchema.safeParse(request.body)
     if (!body.success) {

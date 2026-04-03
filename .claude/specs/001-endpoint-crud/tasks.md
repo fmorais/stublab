@@ -242,11 +242,11 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Revisão
 
-- [ ] **T37** [S] @code-reviewer — Revisão de código backend
+- [x] **T37** [S] @code-reviewer — Revisão de código backend
   - Verificar convenções CLAUDE.md, tipagem strict, sem `any`, testes cobrindo erros
   - Critério: nenhum blocker encontrado
 
-- [ ] **T38** [S] @code-reviewer — Revisão de código frontend
+- [x] **T38** [S] @code-reviewer — Revisão de código frontend
   - Verificar hooks customizados, sem fetch direto, acessibilidade básica, Tailwind sem CSS externo
   - Critério: nenhum blocker encontrado
 
