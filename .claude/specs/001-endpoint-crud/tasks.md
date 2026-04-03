@@ -45,29 +45,29 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Backend — Service Layer
 
-- [ ] **T03** [M] @backend-dev — Implementar `EndpointService.create()`
+- [x] **T03** [M] @backend-dev — Implementar `EndpointService.create()`
   - Arquivo: `apps/api/src/services/endpoint-service.ts`
   - Gera UUID v4, valida unicidade de method+path entre ativos, define timestamps
   - Critério: testes unitários cobrindo caso feliz + conflito 409
 
-- [ ] **T04** [S] @backend-dev — Implementar `EndpointService.findAll()`
+- [x] **T04** [S] @backend-dev — Implementar `EndpointService.findAll()`
   - Suporta filtros: `search` (name ou path), `method`, `active`
   - Critério: testes unitários passando para cada combinação de filtro
 
-- [ ] **T05** [S] @backend-dev — Implementar `EndpointService.findById()`
+- [x] **T05** [S] @backend-dev — Implementar `EndpointService.findById()`
   - Retorna `null` se não existe
   - Critério: testes unitários passando
 
-- [ ] **T06** [M] @backend-dev — Implementar `EndpointService.update()`
+- [x] **T06** [M] @backend-dev — Implementar `EndpointService.update()`
   - Valida conflito ao mudar method/path para combinação já existente em outro ativo
   - Atualiza `updatedAt`
   - Critério: testes unitários cobrindo caso feliz + conflito + not found
 
-- [ ] **T07** [S] @backend-dev — Implementar `EndpointService.toggle()`
+- [x] **T07** [S] @backend-dev — Implementar `EndpointService.toggle()`
   - Alterna `active`; ao ativar, valida conflito de method+path
   - Critério: testes unitários passando
 
-- [ ] **T08** [S] @backend-dev — Implementar `EndpointService.delete()`
+- [x] **T08** [S] @backend-dev — Implementar `EndpointService.delete()`
   - Retorna `boolean` indicando se o registro existia
   - Critério: testes unitários passando
 
