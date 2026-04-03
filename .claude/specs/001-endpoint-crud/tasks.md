@@ -177,28 +177,28 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Componentes UI
 
-- [ ] **T27** [M] @frontend-dev — Criar componente `EndpointForm`
+- [x] **T27** [M] @frontend-dev — Criar componente `EndpointForm`
   - Arquivo: `apps/web/src/components/endpoint-form.tsx`
   - Formulário reutilizável (criar/editar) com react-hook-form + Zod
   - Campos: name, method, path, responseStatus, responseBody (textarea), responseHeaders, delay
   - Critério: todos os campos com validação e mensagens de erro corretas
 
-- [ ] **T28** [S] @frontend-dev — Criar componente `MethodBadge`
+- [x] **T28** [S] @frontend-dev — Criar componente `MethodBadge`
   - Arquivo: `apps/web/src/components/method-badge.tsx`
   - Badge colorido por método: GET=verde, POST=azul, PUT=amarelo, PATCH=laranja, DELETE=vermelho
   - Critério: renderiza corretamente para todos os 5 métodos
 
-- [ ] **T29** [S] @frontend-dev — Criar componente `EndpointTable`
+- [x] **T29** [S] @frontend-dev — Criar componente `EndpointTable`
   - Arquivo: `apps/web/src/components/endpoint-table.tsx`
   - Colunas: Nome, Método (MethodBadge), Path, Status, Ativo (Switch), Ações (editar/deletar)
   - Critério: renderiza lista, toggle funciona, links de editar navegam corretamente
 
-- [ ] **T30** [S] @frontend-dev — Criar componente `DeleteConfirmDialog`
+- [x] **T30** [S] @frontend-dev — Criar componente `DeleteConfirmDialog`
   - Arquivo: `apps/web/src/components/delete-confirm-dialog.tsx`
   - Usa shadcn/ui AlertDialog; exibe nome do endpoint a ser deletado
   - Critério: abre, confirma (chama callback), cancela sem efeito
 
-- [ ] **T31** [S] @frontend-dev — Criar componente `SearchFilters`
+- [x] **T31** [S] @frontend-dev — Criar componente `SearchFilters`
   - Arquivo: `apps/web/src/components/search-filters.tsx`
   - Input de busca + Select de método HTTP + filtro de status
   - Critério: mudanças nos filtros atualizam a query de listagem com debounce no search
