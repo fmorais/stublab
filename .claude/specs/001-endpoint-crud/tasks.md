@@ -207,19 +207,19 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Frontend — Páginas
 
-- [ ] **T32** [M] @frontend-dev — Implementar página `/` (lista de endpoints)
+- [x] **T32** [M] @frontend-dev — Implementar página `/` (lista de endpoints)
   - Arquivo: `apps/web/src/pages/endpoints-list.tsx`
   - Compõe: SearchFilters + EndpointTable
   - Botão "Novo endpoint", estados de loading (skeleton) e erro
   - Critério: lista endpoints do backend, filtros funcionam, ações inline funcionam
 
-- [ ] **T33** [M] @frontend-dev — Implementar página `/endpoints/new`
+- [x] **T33** [M] @frontend-dev — Implementar página `/endpoints/new`
   - Arquivo: `apps/web/src/pages/endpoint-new.tsx`
   - EndpointForm em modo criação; redireciona para `/` após sucesso
   - Exibe erro de API inline (inclusive 409 com mensagem amigável)
   - Critério: cria endpoint e ele aparece na lista
 
-- [ ] **T34** [M] @frontend-dev — Implementar página `/endpoints/:id/edit`
+- [x] **T34** [M] @frontend-dev — Implementar página `/endpoints/:id/edit`
   - Arquivo: `apps/web/src/pages/endpoint-edit.tsx`
   - Carrega endpoint existente (loading state enquanto busca)
   - EndpointForm em modo edição + botão deletar com DeleteConfirmDialog

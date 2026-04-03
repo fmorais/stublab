@@ -16,6 +16,7 @@ export function EndpointTable({ endpoints }: EndpointTableProps) {
   const deleteMutation = useDeleteEndpoint()
 
   const [deleteTarget, setDeleteTarget] = useState<Endpoint | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   return (
     <>
@@ -51,9 +52,12 @@ export function EndpointTable({ endpoints }: EndpointTableProps) {
                   <button
                     role="switch"
                     aria-checked={ep.active}
-                    onClick={() => toggleMutation.mutate(ep.id)}
-                    disabled={toggleMutation.isPending}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    onClick={() => {
+                      setTogglingId(ep.id)
+                      toggleMutation.mutate(ep.id, { onSettled: () => setTogglingId(null) })
+                    }}
+                    disabled={togglingId === ep.id}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
                       ep.active ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
                   >

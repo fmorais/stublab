@@ -38,14 +38,14 @@ describe('apiClient.get', () => {
     expect(result).toEqual([{ id: '1' }])
   })
 
-  it('inclui header Content-Type: application/json', async () => {
+  it('não inclui Content-Type quando não há body', async () => {
     const fetchMock = makeFetchMock()
     vi.stubGlobal('fetch', fetchMock)
 
     await apiClient.get('/endpoints')
 
     const [, init] = fetchMock.mock.calls[0]
-    expect(init.headers['Content-Type']).toBe('application/json')
+    expect(init.headers['Content-Type']).toBeUndefined()
   })
 })
 
