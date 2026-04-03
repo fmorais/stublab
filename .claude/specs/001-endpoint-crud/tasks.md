@@ -229,12 +229,12 @@ O projeto parte do zero — as primeiras tarefas criam a estrutura base.
 
 ## Testes
 
-- [ ] **T35** [M] @tester — Testes de integração E2E backend
+- [x] **T35** [M] @tester — Testes de integração E2E backend
   - Cobrir fluxo completo: criar → listar → editar → toggle → deletar
   - Cobrir mock engine: endpoint ativo responde, inativo não responde, 404 sem match
   - Critério: todos os cenários do requirements.md cobertos, mínimo 80% coverage nas rotas e services
 
-- [ ] **T36** [M] @tester — Testes de componentes React
+- [x] **T36** [M] @tester — Testes de componentes React
   - EndpointForm (validações), EndpointTable (render + interações), páginas principais
   - Critério: componentes renderizam e interagem corretamente, erros de API exibidos
 
