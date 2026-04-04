@@ -1,7 +1,19 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+
+export const workspaces = sqliteTable('workspaces', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
 
 export const endpoints = sqliteTable('endpoints', {
   id: text('id').primaryKey(),
+  workspaceId: text('workspace_id')
+    .notNull()
+    .$default(() => '00000000-0000-0000-0000-000000000001')
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   method: text('method').notNull(),
   path: text('path').notNull(),
@@ -13,11 +25,13 @@ export const endpoints = sqliteTable('endpoints', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, (table) => [
-  // Por que: índice de busca por method+path para o mock engine. Unicidade não é
-  // enforçada no banco pois múltiplos endpoints ativos com o mesmo method+path são
-  // válidos quando possuem matching rules distintas (spec-002). A lógica de conflito
-  // (apenas um fallback por method+path) fica no EndpointService.
-  index('idx_endpoints_method_path').on(table.method, table.path),
+  // Por que: índice composto por workspace+method+path para o mock engine filtrar
+  // endpoints do workspace correto sem full scan.
+  index('idx_endpoints_workspace_method_path').on(
+    table.workspaceId,
+    table.method,
+    table.path,
+  ),
 ])
 
 // Por que: limite de 20 regras por endpoint é aplicado na camada de rota (Zod).

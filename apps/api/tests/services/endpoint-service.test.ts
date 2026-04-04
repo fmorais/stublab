@@ -17,8 +17,12 @@ const serviceModule = await import('../../src/services/endpoint-service.js')
 const { EndpointService, EndpointServiceError } = serviceModule
 type EndpointServiceErrorInstance = InstanceType<typeof EndpointServiceError>
 
+// UUID do workspace "default" criado na migration
+const DEFAULT_WS = '00000000-0000-0000-0000-000000000001'
+
 beforeEach(() => {
   const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
   testDb = drizzle(sqlite, { schema })
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
@@ -26,6 +30,7 @@ beforeEach(() => {
 // Helper para criar um endpoint com valores padrão
 async function createEndpoint(overrides?: Partial<Parameters<typeof EndpointService.create>[0]>) {
   return EndpointService.create({
+    workspaceId: DEFAULT_WS,
     name: 'Test Endpoint',
     method: 'GET',
     path: '/test',
@@ -82,11 +87,21 @@ describe('EndpointService.create', () => {
 
   it('permite criar endpoint com mesmo method+path se o existente está inativo', async () => {
     const existing = await createEndpoint({ method: 'GET', path: '/users' })
-    await EndpointService.toggle(existing.id) // desativa
+    await EndpointService.toggle(existing.id, DEFAULT_WS) // desativa
 
     const result = await createEndpoint({ method: 'GET', path: '/users' })
     expect(result.id).not.toBe(existing.id)
     expect(result.active).toBe(true)
+  })
+
+  it('permite mesmo method+path em workspaces diferentes (sem conflito)', async () => {
+    // Cria um segundo workspace
+    const wsModule = await import('../../src/services/workspace-service.js')
+    const ws2 = await wsModule.WorkspaceService.create({ name: 'Outro', slug: 'outro' })
+
+    await createEndpoint({ method: 'GET', path: '/shared' })
+    const result = await createEndpoint({ workspaceId: ws2.id, method: 'GET', path: '/shared' })
+    expect(result.id).toBeTruthy() // Sem conflito entre workspaces
   })
 })
 
@@ -98,65 +113,75 @@ describe('EndpointService.findAll', () => {
   })
 
   it('retorna todos os endpoints quando sem filtros', async () => {
-    const result = await EndpointService.findAll()
+    const result = await EndpointService.findAll(DEFAULT_WS)
     expect(result.total).toBe(3)
     expect(result.data).toHaveLength(3)
   })
 
   it('filtra por search com match no name', async () => {
-    const result = await EndpointService.findAll({ search: 'usuário' })
+    const result = await EndpointService.findAll(DEFAULT_WS, { search: 'usuário' })
     expect(result.total).toBe(2)
     expect(result.data.every((e) => e.name.includes('usuário'))).toBe(true)
   })
 
   it('filtra por search com match no path', async () => {
-    const result = await EndpointService.findAll({ search: '/products' })
+    const result = await EndpointService.findAll(DEFAULT_WS, { search: '/products' })
     expect(result.total).toBe(1)
     expect(result.data[0].path).toBe('/products')
   })
 
   it('retorna vazio quando search não tem match', async () => {
-    const result = await EndpointService.findAll({ search: 'naoexiste' })
+    const result = await EndpointService.findAll(DEFAULT_WS, { search: 'naoexiste' })
     expect(result.total).toBe(0)
     expect(result.data).toHaveLength(0)
   })
 
   it('filtra por method', async () => {
-    const result = await EndpointService.findAll({ method: 'POST' })
+    const result = await EndpointService.findAll(DEFAULT_WS, { method: 'POST' })
     expect(result.total).toBe(1)
     expect(result.data[0].method).toBe('POST')
   })
 
   it('filtra por active=true', async () => {
-    const all = await EndpointService.findAll()
-    await EndpointService.toggle(all.data[0].id) // desativa o primeiro
+    const all = await EndpointService.findAll(DEFAULT_WS)
+    await EndpointService.toggle(all.data[0].id, DEFAULT_WS) // desativa o primeiro
 
-    const result = await EndpointService.findAll({ active: true })
+    const result = await EndpointService.findAll(DEFAULT_WS, { active: true })
     expect(result.total).toBe(2)
     expect(result.data.every((e) => e.active === true)).toBe(true)
   })
 
   it('filtra por active=false', async () => {
-    const all = await EndpointService.findAll()
-    await EndpointService.toggle(all.data[0].id) // desativa o primeiro
+    const all = await EndpointService.findAll(DEFAULT_WS)
+    await EndpointService.toggle(all.data[0].id, DEFAULT_WS) // desativa o primeiro
 
-    const result = await EndpointService.findAll({ active: false })
+    const result = await EndpointService.findAll(DEFAULT_WS, { active: false })
     expect(result.total).toBe(1)
     expect(result.data[0].active).toBe(false)
   })
 
   it('filtra combinando search e method', async () => {
-    const result = await EndpointService.findAll({ search: 'usuário', method: 'POST' })
+    const result = await EndpointService.findAll(DEFAULT_WS, { search: 'usuário', method: 'POST' })
     expect(result.total).toBe(1)
     expect(result.data[0].name).toBe('Criar usuário')
     expect(result.data[0].method).toBe('POST')
+  })
+
+  it('isola endpoints entre workspaces', async () => {
+    const wsModule = await import('../../src/services/workspace-service.js')
+    const ws2 = await wsModule.WorkspaceService.create({ name: 'Outro', slug: 'outro' })
+    await createEndpoint({ workspaceId: ws2.id, name: 'Ep Outro WS', method: 'GET', path: '/outro' })
+
+    const result = await EndpointService.findAll(DEFAULT_WS)
+    expect(result.data.every((e) => !e.name.includes('Outro WS'))).toBe(true)
+    expect(result.total).toBe(3) // Apenas os do workspace default
   })
 })
 
 describe('EndpointService.findById', () => {
   it('retorna o endpoint existente', async () => {
     const created = await createEndpoint()
-    const found = await EndpointService.findById(created.id)
+    const found = await EndpointService.findById(created.id, DEFAULT_WS)
 
     expect(found).not.toBeNull()
     expect(found!.id).toBe(created.id)
@@ -164,7 +189,16 @@ describe('EndpointService.findById', () => {
   })
 
   it('retorna null para id inexistente', async () => {
-    const result = await EndpointService.findById('00000000-0000-0000-0000-000000000000')
+    const result = await EndpointService.findById('00000000-0000-0000-0000-000000000000', DEFAULT_WS)
+    expect(result).toBeNull()
+  })
+
+  it('retorna null para endpoint de outro workspace', async () => {
+    const wsModule = await import('../../src/services/workspace-service.js')
+    const ws2 = await wsModule.WorkspaceService.create({ name: 'Outro', slug: 'outro' })
+    const ep = await createEndpoint({ workspaceId: ws2.id })
+
+    const result = await EndpointService.findById(ep.id, DEFAULT_WS)
     expect(result).toBeNull()
   })
 })
@@ -176,7 +210,7 @@ describe('EndpointService.update', () => {
     // Garante que o tempo avança minimamente
     await new Promise((r) => setTimeout(r, 5))
 
-    const updated = await EndpointService.update(created.id, {
+    const updated = await EndpointService.update(created.id, DEFAULT_WS, {
       name: 'Nome Atualizado',
       responseStatus: 404,
       delay: 1000,
@@ -192,11 +226,11 @@ describe('EndpointService.update', () => {
 
   it('lança EndpointServiceError NOT_FOUND para id inexistente', async () => {
     await expect(
-      EndpointService.update('00000000-0000-0000-0000-000000000000', { name: 'X' }),
+      EndpointService.update('00000000-0000-0000-0000-000000000000', DEFAULT_WS, { name: 'X' }),
     ).rejects.toThrow(EndpointServiceError)
 
     try {
-      await EndpointService.update('00000000-0000-0000-0000-000000000000', { name: 'X' })
+      await EndpointService.update('00000000-0000-0000-0000-000000000000', DEFAULT_WS, { name: 'X' })
     } catch (err) {
       expect((err as EndpointServiceErrorInstance).code).toBe('NOT_FOUND')
     }
@@ -207,11 +241,11 @@ describe('EndpointService.update', () => {
     const toUpdate = await createEndpoint({ method: 'POST', path: '/other' })
 
     await expect(
-      EndpointService.update(toUpdate.id, { method: 'GET', path: '/existing' }),
+      EndpointService.update(toUpdate.id, DEFAULT_WS, { method: 'GET', path: '/existing' }),
     ).rejects.toThrow(EndpointServiceError)
 
     try {
-      await EndpointService.update(toUpdate.id, { method: 'GET', path: '/existing' })
+      await EndpointService.update(toUpdate.id, DEFAULT_WS, { method: 'GET', path: '/existing' })
     } catch (err) {
       expect((err as EndpointServiceErrorInstance).code).toBe('CONFLICT')
     }
@@ -219,33 +253,40 @@ describe('EndpointService.update', () => {
 
   it('permite atualizar sem conflito quando method+path não muda', async () => {
     const created = await createEndpoint({ method: 'GET', path: '/same' })
-    const updated = await EndpointService.update(created.id, { name: 'Novo Nome' })
+    const updated = await EndpointService.update(created.id, DEFAULT_WS, { name: 'Novo Nome' })
     expect(updated.name).toBe('Novo Nome')
   })
 
   it('permite atualizar method+path para o mesmo valor do próprio endpoint', async () => {
     const created = await createEndpoint({ method: 'GET', path: '/mine' })
-    const updated = await EndpointService.update(created.id, { method: 'GET', path: '/mine' })
+    const updated = await EndpointService.update(created.id, DEFAULT_WS, { method: 'GET', path: '/mine' })
     expect(updated.method).toBe('GET')
     expect(updated.path).toBe('/mine')
   })
 
   it('não verifica conflito ao mudar method+path em endpoint inativo', async () => {
-    // Cria endpoint ativo com GET /inativo-test
     await createEndpoint({ method: 'GET', path: '/inativo-test' })
 
-    // Cria segundo endpoint, desativa-o
     const inactive = await createEndpoint({ method: 'POST', path: '/inactive-path' })
-    await EndpointService.toggle(inactive.id)
+    await EndpointService.toggle(inactive.id, DEFAULT_WS)
 
-    // Mudar o inativo para GET /inativo-test não deve lançar CONFLICT
-    const updated = await EndpointService.update(inactive.id, {
+    const updated = await EndpointService.update(inactive.id, DEFAULT_WS, {
       method: 'GET',
       path: '/inativo-test',
     })
     expect(updated.method).toBe('GET')
     expect(updated.path).toBe('/inativo-test')
     expect(updated.active).toBe(false)
+  })
+
+  it('lança NOT_FOUND ao tentar atualizar endpoint de outro workspace', async () => {
+    const wsModule = await import('../../src/services/workspace-service.js')
+    const ws2 = await wsModule.WorkspaceService.create({ name: 'Outro', slug: 'outro' })
+    const ep = await createEndpoint({ workspaceId: ws2.id })
+
+    await expect(
+      EndpointService.update(ep.id, DEFAULT_WS, { name: 'X' }),
+    ).rejects.toThrow(EndpointServiceError)
   })
 })
 
@@ -254,7 +295,7 @@ describe('EndpointService.toggle', () => {
     const created = await createEndpoint()
     expect(created.active).toBe(true)
 
-    const result = await EndpointService.toggle(created.id)
+    const result = await EndpointService.toggle(created.id, DEFAULT_WS)
     expect(result.id).toBe(created.id)
     expect(result.active).toBe(false)
     expect(result.updatedAt).toBeTruthy()
@@ -262,46 +303,34 @@ describe('EndpointService.toggle', () => {
 
   it('ativa endpoint inativo', async () => {
     const created = await createEndpoint()
-    await EndpointService.toggle(created.id) // desativa
+    await EndpointService.toggle(created.id, DEFAULT_WS) // desativa
 
-    const result = await EndpointService.toggle(created.id) // ativa novamente
+    const result = await EndpointService.toggle(created.id, DEFAULT_WS) // ativa novamente
     expect(result.active).toBe(true)
   })
 
   it('lança EndpointServiceError NOT_FOUND para id inexistente', async () => {
-    await expect(EndpointService.toggle('00000000-0000-0000-0000-000000000000')).rejects.toThrow(
+    await expect(EndpointService.toggle('00000000-0000-0000-0000-000000000000', DEFAULT_WS)).rejects.toThrow(
       EndpointServiceError,
     )
 
     try {
-      await EndpointService.toggle('00000000-0000-0000-0000-000000000000')
+      await EndpointService.toggle('00000000-0000-0000-0000-000000000000', DEFAULT_WS)
     } catch (err) {
       expect((err as EndpointServiceErrorInstance).code).toBe('NOT_FOUND')
     }
   })
 
   it('lança CONFLICT ao ativar quando outro endpoint ativo tem mesmo method+path', async () => {
-    // Cria o primeiro (ativo)
-    await createEndpoint({ method: 'GET', path: '/conflict' })
-
-    // Cria segundo inativo com mesmo method+path: primeiro cria, depois desativa
-    const second = await createEndpoint({ name: 'Segundo', method: 'POST', path: '/conflict-other' })
-    await EndpointService.toggle(second.id) // desativa o segundo
-
-    // Agora cria um terceiro com o mesmo method+path do primeiro mas inativo
-    // Para isso: cria com path diferente, desativa, depois tenta ativar forçando conflito
-    // Abordagem direta: criar endpoint ativo, desativar o primeiro, criar segundo ativo, tentar ativar o primeiro
     const first = await createEndpoint({ method: 'DELETE', path: '/toggle-conflict' })
-    await EndpointService.toggle(first.id) // desativa first
+    await EndpointService.toggle(first.id, DEFAULT_WS) // desativa first
 
-    const other = await createEndpoint({ method: 'DELETE', path: '/toggle-conflict' })
-    expect(other.active).toBe(true)
+    await createEndpoint({ method: 'DELETE', path: '/toggle-conflict' })
 
-    // Tentar ativar o first deve dar CONFLICT
-    await expect(EndpointService.toggle(first.id)).rejects.toThrow(EndpointServiceError)
+    await expect(EndpointService.toggle(first.id, DEFAULT_WS)).rejects.toThrow(EndpointServiceError)
 
     try {
-      await EndpointService.toggle(first.id)
+      await EndpointService.toggle(first.id, DEFAULT_WS)
     } catch (err) {
       expect((err as EndpointServiceErrorInstance).code).toBe('CONFLICT')
     }
@@ -311,16 +340,25 @@ describe('EndpointService.toggle', () => {
 describe('EndpointService.delete', () => {
   it('retorna true para endpoint existente e remove do banco', async () => {
     const created = await createEndpoint()
-    const result = await EndpointService.delete(created.id)
+    const result = await EndpointService.delete(created.id, DEFAULT_WS)
 
     expect(result).toBe(true)
 
-    const found = await EndpointService.findById(created.id)
+    const found = await EndpointService.findById(created.id, DEFAULT_WS)
     expect(found).toBeNull()
   })
 
   it('retorna false para id inexistente', async () => {
-    const result = await EndpointService.delete('00000000-0000-0000-0000-000000000000')
+    const result = await EndpointService.delete('00000000-0000-0000-0000-000000000000', DEFAULT_WS)
+    expect(result).toBe(false)
+  })
+
+  it('retorna false para endpoint de outro workspace', async () => {
+    const wsModule = await import('../../src/services/workspace-service.js')
+    const ws2 = await wsModule.WorkspaceService.create({ name: 'Outro', slug: 'outro' })
+    const ep = await createEndpoint({ workspaceId: ws2.id })
+
+    const result = await EndpointService.delete(ep.id, DEFAULT_WS)
     expect(result).toBe(false)
   })
 })
@@ -328,6 +366,7 @@ describe('EndpointService.delete', () => {
 describe('EndpointService.create com matchingRules', () => {
   it('cria endpoint com regras e retorna matchingRules populado', async () => {
     const result = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Com Regras',
       method: 'POST',
       path: '/pagamentos',
@@ -356,6 +395,7 @@ describe('EndpointService.create com matchingRules', () => {
 
   it('cria endpoint com matchingRules vazio e retorna matchingRules: []', async () => {
     const result = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Sem Regras',
       method: 'DELETE',
       path: '/recursos',
@@ -369,6 +409,7 @@ describe('EndpointService.create com matchingRules', () => {
 describe('EndpointService.findById com matchingRules', () => {
   it('retorna matchingRules populado para endpoint com regras', async () => {
     const created = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Com Regras',
       method: 'POST',
       path: '/find-test',
@@ -378,7 +419,7 @@ describe('EndpointService.findById com matchingRules', () => {
       ],
     })
 
-    const found = await EndpointService.findById(created.id)
+    const found = await EndpointService.findById(created.id, DEFAULT_WS)
 
     expect(found).not.toBeNull()
     expect(found!.matchingRules).toHaveLength(1)
@@ -389,7 +430,7 @@ describe('EndpointService.findById com matchingRules', () => {
 
   it('retorna matchingRules: [] para endpoint sem regras', async () => {
     const created = await createEndpoint()
-    const found = await EndpointService.findById(created.id)
+    const found = await EndpointService.findById(created.id, DEFAULT_WS)
 
     expect(found).not.toBeNull()
     expect(found!.matchingRules).toEqual([])
@@ -399,6 +440,7 @@ describe('EndpointService.findById com matchingRules', () => {
 describe('EndpointService.findAll com matchingRules', () => {
   it('retorna matchingRules em cada endpoint da listagem', async () => {
     const ep1 = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Ep1',
       method: 'GET',
       path: '/list-test-1',
@@ -408,13 +450,14 @@ describe('EndpointService.findAll com matchingRules', () => {
       ],
     })
     await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Ep2',
       method: 'POST',
       path: '/list-test-2',
       responseStatus: 201,
     })
 
-    const result = await EndpointService.findAll()
+    const result = await EndpointService.findAll(DEFAULT_WS)
     const found1 = result.data.find((e) => e.id === ep1.id)
     const found2 = result.data.find((e) => e.path === '/list-test-2')
 
@@ -430,6 +473,7 @@ describe('EndpointService.findAll com matchingRules', () => {
 describe('EndpointService.update com matchingRules', () => {
   it('substitui regras existentes quando matchingRules é fornecido', async () => {
     const created = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Para Atualizar',
       method: 'PUT',
       path: '/update-rules',
@@ -439,7 +483,7 @@ describe('EndpointService.update com matchingRules', () => {
       ],
     })
 
-    const updated = await EndpointService.update(created.id, {
+    const updated = await EndpointService.update(created.id, DEFAULT_WS, {
       matchingRules: [
         { source: 'header', field: 'novo', operator: 'exists' },
         { source: 'query', field: 'outro', operator: 'neq', value: 'z' },
@@ -454,6 +498,7 @@ describe('EndpointService.update com matchingRules', () => {
 
   it('remove todas as regras quando matchingRules: []', async () => {
     const created = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Para Limpar',
       method: 'PATCH',
       path: '/clear-rules',
@@ -463,12 +508,13 @@ describe('EndpointService.update com matchingRules', () => {
       ],
     })
 
-    const updated = await EndpointService.update(created.id, { matchingRules: [] })
+    const updated = await EndpointService.update(created.id, DEFAULT_WS, { matchingRules: [] })
     expect(updated.matchingRules).toEqual([])
   })
 
   it('mantém regras inalteradas quando matchingRules não é fornecido', async () => {
     const created = await EndpointService.create({
+      workspaceId: DEFAULT_WS,
       name: 'Preservar Regras',
       method: 'DELETE',
       path: '/preserve-rules',
@@ -478,7 +524,7 @@ describe('EndpointService.update com matchingRules', () => {
       ],
     })
 
-    const updated = await EndpointService.update(created.id, { name: 'Nome Atualizado' })
+    const updated = await EndpointService.update(created.id, DEFAULT_WS, { name: 'Nome Atualizado' })
 
     expect(updated.name).toBe('Nome Atualizado')
     expect(updated.matchingRules).toHaveLength(1)

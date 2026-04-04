@@ -21,21 +21,21 @@ beforeEach(() => {
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
 
-describe('PUT /api/endpoints/:id', () => {
+describe('PUT /api/workspaces/:slug/endpoints/:id', () => {
   it('atualiza endpoint com dados válidos e retorna 200', async () => {
     const app = await buildApp()
     await app.ready()
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Original', method: 'GET', path: '/original', responseStatus: 200 },
     })
     const { id } = created.json()
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { name: 'Atualizado', responseStatus: 404, delay: 100 },
     })
 
@@ -57,14 +57,14 @@ describe('PUT /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Teste', method: 'GET', path: '/test', responseStatus: 200 },
     })
     const { id } = created.json()
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { responseStatus: 99 },
     })
 
@@ -80,7 +80,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const res = await app.inject({
       method: 'PUT',
-      url: '/api/endpoints/00000000-0000-0000-0000-000000000000',
+      url: '/api/workspaces/default/endpoints/00000000-0000-0000-0000-000000000000',
       payload: { name: 'Novo nome' },
     })
 
@@ -96,20 +96,20 @@ describe('PUT /api/endpoints/:id', () => {
 
     await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Existente', method: 'GET', path: '/existing', responseStatus: 200 },
     })
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Outro', method: 'POST', path: '/other', responseStatus: 200 },
     })
     const { id } = created.json()
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { method: 'GET', path: '/existing' },
     })
 
@@ -125,14 +125,14 @@ describe('PUT /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Original', method: 'GET', path: '/same', responseStatus: 200 },
     })
     const { id } = created.json()
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { name: 'Novo nome' },
     })
 
@@ -148,7 +148,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Com regra original',
         method: 'GET',
@@ -161,7 +161,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: {
         matchingRules: [{ source: 'header', field: 'x-tenant-id', operator: 'exists' }],
       },
@@ -185,7 +185,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Com regra para remover',
         method: 'GET',
@@ -198,7 +198,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { matchingRules: [] },
     })
 
@@ -214,7 +214,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Com regra mantida',
         method: 'GET',
@@ -227,7 +227,7 @@ describe('PUT /api/endpoints/:id', () => {
 
     const res = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { name: 'Nome atualizado' },
     })
 

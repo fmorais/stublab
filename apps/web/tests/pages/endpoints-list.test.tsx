@@ -22,9 +22,24 @@ vi.mock('@web/hooks/use-export-endpoints', () => ({
   useExportEndpoints: vi.fn(() => ({ exportAll: vi.fn(), exportSelected: vi.fn() })),
 }))
 
+vi.mock('@web/hooks/use-workspaces', () => ({
+  useWorkspace: vi.fn(() => ({ data: { id: 'ws-1', name: 'Default', slug: 'default', endpointCount: 0, activeEndpointCount: 0 }, isLoading: false })),
+  useUpdateWorkspace: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null, reset: vi.fn() })),
+  useDeleteWorkspace: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null, reset: vi.fn() })),
+}))
+
 vi.mock('@web/components/import-modal', () => ({
   ImportModal: () => null,
 }))
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useParams: vi.fn().mockReturnValue({ slug: 'default' }),
+    useNavigate: vi.fn(() => vi.fn()),
+  }
+})
 
 import { useEndpoints } from '@web/hooks/use-endpoints'
 import { useToggleEndpoint } from '@web/hooks/use-toggle-endpoint'
@@ -63,6 +78,8 @@ function renderPage() {
 
 describe('EndpointsList', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+
     mockUseToggleEndpoint.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,

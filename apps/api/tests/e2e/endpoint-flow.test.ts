@@ -33,7 +33,7 @@ describe('Fluxo 1 — CRUD completo', () => {
     // Passo 1: POST /api/endpoints → 201
     const createRes = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Listar usuários',
         method: 'GET',
@@ -50,14 +50,14 @@ describe('Fluxo 1 — CRUD completo', () => {
     const id = created.id
 
     // Passo 2: GET /api/endpoints → aparece na lista (total=1)
-    const listRes = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    const listRes = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints' })
     expect(listRes.statusCode).toBe(200)
     const listBody = listRes.json()
     expect(listBody.total).toBe(1)
     expect(listBody.data[0].id).toBe(id)
 
     // Passo 3: GET /api/endpoints/:id → retorna o endpoint criado
-    const getRes = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const getRes = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
     expect(getRes.statusCode).toBe(200)
     const getBody = getRes.json()
     expect(getBody.id).toBe(id)
@@ -67,7 +67,7 @@ describe('Fluxo 1 — CRUD completo', () => {
     // Passo 4: PUT /api/endpoints/:id → atualiza name e responseStatus
     const updateRes = await app.inject({
       method: 'PUT',
-      url: `/api/endpoints/${id}`,
+      url: `/api/workspaces/default/endpoints/${id}`,
       payload: { name: 'Usuários atualizados', responseStatus: 202 },
     })
     expect(updateRes.statusCode).toBe(200)
@@ -76,7 +76,7 @@ describe('Fluxo 1 — CRUD completo', () => {
     expect(updated.responseStatus).toBe(202)
 
     // Passo 5: GET /api/endpoints/:id → reflete as mudanças
-    const getAfterUpdateRes = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const getAfterUpdateRes = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
     expect(getAfterUpdateRes.statusCode).toBe(200)
     const getAfterUpdate = getAfterUpdateRes.json()
     expect(getAfterUpdate.name).toBe('Usuários atualizados')
@@ -85,31 +85,31 @@ describe('Fluxo 1 — CRUD completo', () => {
     // Passo 6: PATCH toggle → desativa (active=false)
     const toggleOffRes = await app.inject({
       method: 'PATCH',
-      url: `/api/endpoints/${id}/toggle`,
+      url: `/api/workspaces/default/endpoints/${id}/toggle`,
     })
     expect(toggleOffRes.statusCode).toBe(200)
     expect(toggleOffRes.json().active).toBe(false)
 
     // Passo 7: GET /api/endpoints/:id → active=false
-    const getInactiveRes = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const getInactiveRes = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
     expect(getInactiveRes.statusCode).toBe(200)
     expect(getInactiveRes.json().active).toBe(false)
 
     // Passo 8: PATCH toggle → reativa (active=true)
     const toggleOnRes = await app.inject({
       method: 'PATCH',
-      url: `/api/endpoints/${id}/toggle`,
+      url: `/api/workspaces/default/endpoints/${id}/toggle`,
     })
     expect(toggleOnRes.statusCode).toBe(200)
     expect(toggleOnRes.json().active).toBe(true)
 
     // Passo 9: DELETE /api/endpoints/:id → 204
-    const deleteRes = await app.inject({ method: 'DELETE', url: `/api/endpoints/${id}` })
+    const deleteRes = await app.inject({ method: 'DELETE', url: `/api/workspaces/default/endpoints/${id}` })
     expect(deleteRes.statusCode).toBe(204)
     expect(deleteRes.body).toBe('')
 
     // Passo 10: GET /api/endpoints/:id → 404
-    const getDeletedRes = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const getDeletedRes = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
     expect(getDeletedRes.statusCode).toBe(404)
     expect(getDeletedRes.json().code).toBe('NOT_FOUND')
 
@@ -129,7 +129,7 @@ describe('Fluxo 2 — Mock engine integrado', () => {
     // Passo 1: criar endpoint ativo GET /users com status 200
     const createRes = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Mock users',
         method: 'GET',
@@ -142,42 +142,42 @@ describe('Fluxo 2 — Mock engine integrado', () => {
     const id = createRes.json().id
 
     // Passo 2: GET /mock/users → responde 200 com body correto
-    const mockRes1 = await app.inject({ method: 'GET', url: '/mock/users' })
+    const mockRes1 = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(mockRes1.statusCode).toBe(200)
     expect(mockRes1.body).toBe('{"users":[]}')
 
     // Passo 3: PATCH toggle → desativa endpoint
     const toggleOffRes = await app.inject({
       method: 'PATCH',
-      url: `/api/endpoints/${id}/toggle`,
+      url: `/api/workspaces/default/endpoints/${id}/toggle`,
     })
     expect(toggleOffRes.statusCode).toBe(200)
     expect(toggleOffRes.json().active).toBe(false)
 
     // Passo 4: GET /mock/users → 404 MOCK_NOT_FOUND
-    const mockRes2 = await app.inject({ method: 'GET', url: '/mock/users' })
+    const mockRes2 = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(mockRes2.statusCode).toBe(404)
     expect(mockRes2.json().code).toBe('MOCK_NOT_FOUND')
 
     // Passo 5: PATCH toggle → reativa
     const toggleOnRes = await app.inject({
       method: 'PATCH',
-      url: `/api/endpoints/${id}/toggle`,
+      url: `/api/workspaces/default/endpoints/${id}/toggle`,
     })
     expect(toggleOnRes.statusCode).toBe(200)
     expect(toggleOnRes.json().active).toBe(true)
 
     // Passo 6: GET /mock/users → responde 200 novamente
-    const mockRes3 = await app.inject({ method: 'GET', url: '/mock/users' })
+    const mockRes3 = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(mockRes3.statusCode).toBe(200)
     expect(mockRes3.body).toBe('{"users":[]}')
 
     // Passo 7: DELETE endpoint
-    const deleteRes = await app.inject({ method: 'DELETE', url: `/api/endpoints/${id}` })
+    const deleteRes = await app.inject({ method: 'DELETE', url: `/api/workspaces/default/endpoints/${id}` })
     expect(deleteRes.statusCode).toBe(204)
 
     // Passo 8: GET /mock/users → 404 MOCK_NOT_FOUND (endpoint deletado)
-    const mockRes4 = await app.inject({ method: 'GET', url: '/mock/users' })
+    const mockRes4 = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(mockRes4.statusCode).toBe(404)
     expect(mockRes4.json().code).toBe('MOCK_NOT_FOUND')
 
@@ -197,7 +197,7 @@ describe('Fluxo 3 — Regras de negócio com conflito de method+path', () => {
     // Passo 1: criar primeiro endpoint ativo GET /conflict
     const first = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Primeiro', method: 'GET', path: '/conflict', responseStatus: 200 },
     })
     expect(first.statusCode).toBe(201)
@@ -206,18 +206,18 @@ describe('Fluxo 3 — Regras de negócio com conflito de method+path', () => {
     // Tentar criar segundo com mesmo method+path → 409
     const second = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Segundo', method: 'GET', path: '/conflict', responseStatus: 200 },
     })
     expect(second.statusCode).toBe(409)
     expect(second.json().code).toBe('CONFLICT')
 
     // Passo 2: desativar o primeiro → criar o segundo → sucesso
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${firstId}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${firstId}/toggle` })
 
     const secondOk = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Segundo', method: 'GET', path: '/conflict', responseStatus: 201 },
     })
     expect(secondOk.statusCode).toBe(201)
@@ -227,16 +227,16 @@ describe('Fluxo 3 — Regras de negócio com conflito de method+path', () => {
     // Passo 3: tentar reativar o primeiro → 409 (conflito com o segundo ativo)
     const reactivateFirst = await app.inject({
       method: 'PATCH',
-      url: `/api/endpoints/${firstId}/toggle`,
+      url: `/api/workspaces/default/endpoints/${firstId}/toggle`,
     })
     expect(reactivateFirst.statusCode).toBe(409)
     expect(reactivateFirst.json().code).toBe('CONFLICT')
 
     // Verificar estado final: primeiro ainda inativo, segundo ainda ativo
-    const getFirst = await app.inject({ method: 'GET', url: `/api/endpoints/${firstId}` })
+    const getFirst = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${firstId}` })
     expect(getFirst.json().active).toBe(false)
 
-    const getSecond = await app.inject({ method: 'GET', url: `/api/endpoints/${secondId}` })
+    const getSecond = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${secondId}` })
     expect(getSecond.json().active).toBe(true)
 
     await app.close()
@@ -249,24 +249,24 @@ describe('Fluxo 3 — Regras de negócio com conflito de method+path', () => {
     // Cria primeiro, desativa
     const first = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Primeiro', method: 'POST', path: '/shared', responseStatus: 201 },
     })
     const firstId = first.json().id
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${firstId}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${firstId}/toggle` })
 
     // Cria segundo com mesmo method+path, desativa
     const second = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Segundo', method: 'POST', path: '/shared', responseStatus: 201 },
     })
     expect(second.statusCode).toBe(201)
     const secondId = second.json().id
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${secondId}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${secondId}/toggle` })
 
     // Ambos inativos — GET lista mostra 2 com active=false
-    const listRes = await app.inject({ method: 'GET', url: '/api/endpoints?active=false' })
+    const listRes = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?active=false' })
     expect(listRes.statusCode).toBe(200)
     const listBody = listRes.json()
     expect(listBody.total).toBe(2)
@@ -288,7 +288,7 @@ describe('Fluxo 4 — Mock com delay', () => {
     // Passo 1: criar endpoint com delay=100ms
     const createRes = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Com delay',
         method: 'GET',
@@ -303,7 +303,7 @@ describe('Fluxo 4 — Mock com delay', () => {
 
     // Passo 2: medir tempo da resposta de /mock/slow → >= 100ms
     const start = Date.now()
-    const mockRes = await app.inject({ method: 'GET', url: '/mock/slow' })
+    const mockRes = await app.inject({ method: 'GET', url: '/mock/default/slow' })
     const elapsed = Date.now() - start
 
     expect(mockRes.statusCode).toBe(200)
@@ -319,7 +319,7 @@ describe('Fluxo 4 — Mock com delay', () => {
 
     await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Sem delay',
         method: 'GET',
@@ -331,7 +331,7 @@ describe('Fluxo 4 — Mock com delay', () => {
     })
 
     const start = Date.now()
-    const mockRes = await app.inject({ method: 'GET', url: '/mock/fast' })
+    const mockRes = await app.inject({ method: 'GET', url: '/mock/default/fast' })
     const elapsed = Date.now() - start
 
     expect(mockRes.statusCode).toBe(200)

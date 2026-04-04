@@ -11,17 +11,17 @@ function downloadJson(data: object, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function useExportEndpoints() {
+export function useExportEndpoints(slug: string) {
   async function exportAll() {
-    const data = await apiClient.get<ExportFile>('/endpoints/export')
+    const data = await apiClient.get<ExportFile>(`/workspaces/${slug}/endpoints/export`)
     const date = new Date().toISOString().slice(0, 10)
-    downloadJson(data, `stublab-export-${date}.json`)
+    downloadJson(data, `stublab-export-${slug}-${date}.json`)
   }
 
   async function exportSelected(ids: string[]) {
-    const data = await apiClient.get<ExportFile>(`/endpoints/export?ids=${ids.join(',')}`)
+    const data = await apiClient.get<ExportFile>(`/workspaces/${slug}/endpoints/export?ids=${ids.join(',')}`)
     const date = new Date().toISOString().slice(0, 10)
-    downloadJson(data, `stublab-export-${date}.json`)
+    downloadJson(data, `stublab-export-${slug}-${date}.json`)
   }
 
   return { exportAll, exportSelected }

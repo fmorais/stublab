@@ -15,7 +15,7 @@ export async function getEndpointRoute(app: FastifyInstance) {
     const { id } = params.data
 
     try {
-      const endpoint = await EndpointService.findById(id)
+      const endpoint = await EndpointService.findById(id, request.workspace.id)
       if (!endpoint) {
         return reply.status(404).send({ error: `Endpoint com id ${id} não encontrado`, code: 'NOT_FOUND' })
       }

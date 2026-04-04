@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify'
-import { eq, inArray } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { endpoints, matchingRules } from '../db/schema.js'
+import { WorkspaceService } from '../services/workspace-service.js'
 import { matchEndpoint } from './engine.js'
 import type { Endpoint, HttpMethod, MatchingRule, RuleSource, RuleOperator } from '../types/endpoint.js'
 
@@ -31,9 +32,20 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
   for (const method of METHODS) {
     app.route({
       method,
-      url: '/mock/*',
+      url: '/mock/:slug/*',
       handler: async (request, reply) => {
-        const wildcardPath = '/' + (request.params as { '*': string })['*']
+        const params = request.params as { slug: string; '*': string }
+        const { slug } = params
+        const wildcardPath = '/' + params['*']
+
+        // 1. Buscar workspace pelo slug
+        const workspace = await WorkspaceService.findBySlug(slug)
+        if (!workspace) {
+          return reply.status(404).send({
+            error: 'Workspace não encontrado',
+            code: 'WORKSPACE_NOT_FOUND',
+          })
+        }
 
         // Extrair query params
         const url = new URL(request.url, 'http://localhost')
@@ -62,11 +74,14 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
           }
         }
 
-        // Buscar endpoints ativos
+        // 2. Buscar apenas endpoints ativos do workspace
         const rows = await db
           .select()
           .from(endpoints)
-          .where(eq(endpoints.active, true))
+          .where(and(
+            eq(endpoints.workspaceId, workspace.id),
+            eq(endpoints.active, true),
+          ))
 
         if (rows.length === 0) {
           return reply
@@ -74,7 +89,7 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
             .send({ error: 'No mock found', code: 'MOCK_NOT_FOUND' })
         }
 
-        // Buscar matching rules em batch para todos os endpoints ativos
+        // Buscar matching rules em batch para todos os endpoints ativos do workspace
         const endpointIds = rows.map((r) => r.id)
         const ruleRows = await db
           .select()

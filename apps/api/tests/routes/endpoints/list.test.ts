@@ -27,7 +27,7 @@ async function createEndpoint(
 ) {
   const res = await app.inject({
     method: 'POST',
-    url: '/api/endpoints',
+    url: '/api/workspaces/default/endpoints',
     payload: {
       name: 'Endpoint padrão',
       method: 'GET',
@@ -39,12 +39,12 @@ async function createEndpoint(
   return res.json()
 }
 
-describe('GET /api/endpoints', () => {
+describe('GET /api/workspaces/:slug/endpoints', () => {
   it('retorna lista vazia quando não há endpoints', async () => {
     const app = await buildApp()
     await app.ready()
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -61,7 +61,7 @@ describe('GET /api/endpoints', () => {
     await createEndpoint(app, { name: 'Listar usuários', method: 'GET', path: '/users' })
     await createEndpoint(app, { name: 'Criar usuário', method: 'POST', path: '/users' })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -78,7 +78,7 @@ describe('GET /api/endpoints', () => {
     await createEndpoint(app, { name: 'GET endpoint', method: 'GET', path: '/get-only' })
     await createEndpoint(app, { name: 'POST endpoint', method: 'POST', path: '/post-only' })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints?method=POST' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?method=POST' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -95,9 +95,9 @@ describe('GET /api/endpoints', () => {
     const ep1 = await createEndpoint(app, { name: 'Ativo', method: 'GET', path: '/active' })
     const ep2 = await createEndpoint(app, { name: 'Inativo', method: 'POST', path: '/inactive' })
 
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${ep2.id}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${ep2.id}/toggle` })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints?active=true' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?active=true' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -115,9 +115,9 @@ describe('GET /api/endpoints', () => {
     const ep1 = await createEndpoint(app, { name: 'Ativo', method: 'GET', path: '/active' })
     await createEndpoint(app, { name: 'Ativo também', method: 'POST', path: '/also-active' })
 
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${ep1.id}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${ep1.id}/toggle` })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints?active=false' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?active=false' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -135,7 +135,7 @@ describe('GET /api/endpoints', () => {
     await createEndpoint(app, { name: 'Listar usuários', method: 'GET', path: '/users' })
     await createEndpoint(app, { name: 'Buscar produto', method: 'GET', path: '/products' })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints?search=usuário' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?search=usuário' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -152,7 +152,7 @@ describe('GET /api/endpoints', () => {
     await createEndpoint(app, { name: 'Usuários', method: 'GET', path: '/users' })
     await createEndpoint(app, { name: 'Produtos', method: 'GET', path: '/products' })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints?search=/products' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?search=/products' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -166,7 +166,7 @@ describe('GET /api/endpoints', () => {
     const app = await buildApp()
     await app.ready()
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints?method=INVALIDO' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints?method=INVALIDO' })
 
     expect(res.statusCode).toBe(400)
     expect(res.json().code).toBe('VALIDATION_ERROR')
@@ -184,7 +184,7 @@ describe('GET /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/api/endpoints?search=usuário&method=POST',
+      url: '/api/workspaces/default/endpoints?search=usuário&method=POST',
     })
 
     expect(res.statusCode).toBe(200)
@@ -202,7 +202,7 @@ describe('GET /api/endpoints', () => {
 
     await createEndpoint(app, { name: 'Sem regras', method: 'GET', path: '/list-no-rules' })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()

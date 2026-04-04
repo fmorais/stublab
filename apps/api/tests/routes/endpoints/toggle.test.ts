@@ -21,19 +21,19 @@ beforeEach(() => {
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
 
-describe('PATCH /api/endpoints/:id/toggle', () => {
+describe('PATCH /api/workspaces/:slug/endpoints/:id/toggle', () => {
   it('desativa endpoint ativo e retorna active=false', async () => {
     const app = await buildApp()
     await app.ready()
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Ativo', method: 'GET', path: '/toggle-test', responseStatus: 200 },
     })
     const { id } = created.json()
 
-    const res = await app.inject({ method: 'PATCH', url: `/api/endpoints/${id}/toggle` })
+    const res = await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${id}/toggle` })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -50,14 +50,14 @@ describe('PATCH /api/endpoints/:id/toggle', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Para desativar', method: 'GET', path: '/toggle-reactivate', responseStatus: 200 },
     })
     const { id } = created.json()
 
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${id}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${id}/toggle` })
 
-    const res = await app.inject({ method: 'PATCH', url: `/api/endpoints/${id}/toggle` })
+    const res = await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${id}/toggle` })
 
     expect(res.statusCode).toBe(200)
     expect(res.json().active).toBe(true)
@@ -71,7 +71,7 @@ describe('PATCH /api/endpoints/:id/toggle', () => {
 
     const res = await app.inject({
       method: 'PATCH',
-      url: '/api/endpoints/00000000-0000-0000-0000-000000000000/toggle',
+      url: '/api/workspaces/default/endpoints/00000000-0000-0000-0000-000000000000/toggle',
     })
 
     expect(res.statusCode).toBe(404)
@@ -86,20 +86,20 @@ describe('PATCH /api/endpoints/:id/toggle', () => {
 
     const first = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Primeiro', method: 'DELETE', path: '/conflict-toggle', responseStatus: 200 },
     })
     const firstId = first.json().id
 
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${firstId}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${firstId}/toggle` })
 
     await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Segundo', method: 'DELETE', path: '/conflict-toggle', responseStatus: 200 },
     })
 
-    const res = await app.inject({ method: 'PATCH', url: `/api/endpoints/${firstId}/toggle` })
+    const res = await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${firstId}/toggle` })
 
     expect(res.statusCode).toBe(409)
     expect(res.json().code).toBe('CONFLICT')

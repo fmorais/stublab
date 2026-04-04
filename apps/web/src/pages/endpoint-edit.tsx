@@ -1,30 +1,33 @@
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
-import { useEndpoint } from '@web/hooks/use-endpoint'
+import { useEndpoint } from '@web/hooks/use-endpoints'
 import { useUpdateEndpoint } from '@web/hooks/use-update-endpoint'
 import { useDeleteEndpoint } from '@web/hooks/use-delete-endpoint'
+import { useWorkspace } from '@web/hooks/use-workspaces'
 import { EndpointForm } from '@web/components/endpoint-form'
+import { WorkspaceSelector } from '@web/components/workspace-selector'
 import type { UpdateEndpointInput, CreateEndpointInput } from '@web/types/endpoint'
 
 export function EndpointEdit() {
-  const { id } = useParams<{ id: string }>()
+  const { slug, id } = useParams<{ slug: string; id: string }>()
   const navigate = useNavigate()
-  const { data: endpoint, isLoading, isError: loadError } = useEndpoint(id ?? '')
-  const updateMutation = useUpdateEndpoint()
-  const deleteMutation = useDeleteEndpoint()
+  const { data: workspace } = useWorkspace(slug ?? '')
+  const { data: endpoint, isLoading, isError: loadError } = useEndpoint(slug ?? '', id ?? '')
+  const updateMutation = useUpdateEndpoint(slug ?? '')
+  const deleteMutation = useDeleteEndpoint(slug ?? '')
 
-  if (!id) return <Navigate to="/" replace />
+  if (!slug || !id) return <Navigate to="/" replace />
 
   const safeId: string = id
 
   async function handleSubmit(data: CreateEndpointInput | UpdateEndpointInput) {
     await updateMutation.mutateAsync({ id: safeId, data: data as UpdateEndpointInput })
-    navigate('/')
+    navigate(`/workspaces/${slug}/endpoints`)
   }
 
   async function handleDelete() {
     if (!confirm(`Tem certeza que deseja deletar "${endpoint?.name}"?`)) return
     await deleteMutation.mutateAsync(safeId)
-    navigate('/')
+    navigate(`/workspaces/${slug}/endpoints`)
   }
 
   const errorMessage = updateMutation.error
@@ -49,7 +52,7 @@ export function EndpointEdit() {
         <p className="text-sm text-red-600">Endpoint não encontrado.</p>
         <button
           type="button"
-          onClick={() => navigate('/')}
+          onClick={() => navigate(`/workspaces/${slug}/endpoints`)}
           className="text-sm text-muted-foreground hover:underline"
         >
           ← Voltar
@@ -60,6 +63,8 @@ export function EndpointEdit() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <WorkspaceSelector workspaceName={workspace?.name ?? slug} />
+
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold">Editar endpoint</h1>
@@ -88,7 +93,7 @@ export function EndpointEdit() {
           matchingRules: endpoint.matchingRules,
         }}
         onSubmit={handleSubmit}
-        onCancel={() => navigate('/')}
+        onCancel={() => navigate(`/workspaces/${slug}/endpoints`)}
         isPending={updateMutation.isPending}
         isError={!!updateMutation.error}
         errorMessage={errorMessage}

@@ -22,7 +22,7 @@ export async function createEndpointRoute(app: FastifyInstance) {
     }
 
     try {
-      const endpoint = await EndpointService.create(body.data)
+      const endpoint = await EndpointService.create({ ...body.data, workspaceId: request.workspace.id })
       return reply.status(201).send(endpoint)
     } catch (err) {
       if (err instanceof EndpointServiceError) {

@@ -10,7 +10,7 @@ export async function importEndpointsRoute(app: FastifyInstance) {
     }
 
     try {
-      const result = await ImportExportService.executeImport(body.data.data, body.data.strategy)
+      const result = await ImportExportService.executeImport(request.workspace.id, body.data.data, body.data.strategy)
       return reply.status(200).send(result)
     } catch (err) {
       request.log.error(err)

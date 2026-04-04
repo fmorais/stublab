@@ -28,9 +28,6 @@ function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
     delay: row.delay,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    // Por que: matchingRules são carregadas separadamente (T08/T09). Aqui o array vazio
-    // garante compatibilidade com a interface — os callers que precisam das regras
-    // devem usar os métodos que populam o campo (a ser implementado em T08/T09).
     matchingRules: [],
   }
 }
@@ -39,6 +36,7 @@ export const EndpointService = {
   async create(input: CreateEndpointInput): Promise<Endpoint> {
     // Por que: só é conflito quando o novo endpoint NÃO tem regras (seria um segundo fallback).
     // Endpoints com regras podem coexistir no mesmo method+path — é o caso de uso central da spec-002.
+    // A unicidade é por workspace: endpoints de workspaces diferentes não conflitam.
     const incomingHasRules = (input.matchingRules?.length ?? 0) > 0
 
     if (!incomingHasRules) {
@@ -47,13 +45,13 @@ export const EndpointService = {
         .from(endpoints)
         .where(
           and(
+            eq(endpoints.workspaceId, input.workspaceId),
             eq(endpoints.method, input.method),
             eq(endpoints.path, input.path),
             eq(endpoints.active, true),
           ),
         )
 
-      // Filtra apenas os que não têm regras (fallbacks)
       const fallbackIds = existingFallbacks.map((e) => e.id)
       if (fallbackIds.length > 0) {
         const existingRules = await MatchingRuleService.findByEndpointIds(fallbackIds)
@@ -73,6 +71,7 @@ export const EndpointService = {
 
     const newEndpoint = {
       id,
+      workspaceId: input.workspaceId,
       name: input.name,
       method: input.method,
       path: input.path,
@@ -97,13 +96,14 @@ export const EndpointService = {
   },
 
   async findAll(
+    workspaceId: string,
     filters?: { search?: string; method?: HttpMethod; active?: boolean },
   ): Promise<{ data: Endpoint[]; total: number }> {
-    const conditions = []
+    const conditions = [eq(endpoints.workspaceId, workspaceId)]
 
     if (filters?.search) {
       const term = `%${filters.search}%`
-      conditions.push(or(like(endpoints.name, term), like(endpoints.path, term)))
+      conditions.push(or(like(endpoints.name, term), like(endpoints.path, term))!)
     }
 
     if (filters?.method !== undefined) {
@@ -114,13 +114,7 @@ export const EndpointService = {
       conditions.push(eq(endpoints.active, filters.active))
     }
 
-    const rows =
-      conditions.length > 0
-        ? await db
-            .select()
-            .from(endpoints)
-            .where(and(...conditions))
-        : await db.select().from(endpoints)
+    const rows = await db.select().from(endpoints).where(and(...conditions))
 
     const baseEndpoints = rows.map(rowToEndpoint)
     const ids = baseEndpoints.map((e) => e.id)
@@ -132,17 +126,23 @@ export const EndpointService = {
     return { data, total: data.length }
   },
 
-  async findById(id: string): Promise<Endpoint | null> {
+  async findById(id: string, workspaceId: string): Promise<Endpoint | null> {
     const [row] = await db.select().from(endpoints).where(eq(endpoints.id, id))
     if (!row) return null
+    // Por que: retorna null se o endpoint pertence a outro workspace — equivalente a "não existe" neste contexto
+    if (row.workspaceId !== workspaceId) return null
     const rules = await MatchingRuleService.findByEndpointId(id)
     return { ...rowToEndpoint(row), matchingRules: rules }
   },
 
-  async update(id: string, input: UpdateEndpointInput): Promise<Endpoint> {
+  async update(id: string, workspaceId: string, input: UpdateEndpointInput): Promise<Endpoint> {
     const [existing] = await db.select().from(endpoints).where(eq(endpoints.id, id))
 
     if (!existing) {
+      throw new EndpointServiceError('NOT_FOUND', `Endpoint com id ${id} não encontrado`)
+    }
+
+    if (existing.workspaceId !== workspaceId) {
       throw new EndpointServiceError('NOT_FOUND', `Endpoint com id ${id} não encontrado`)
     }
 
@@ -154,19 +154,18 @@ export const EndpointService = {
       (input.path !== undefined && input.path !== existing.path)
 
     if (isMethodOrPathChanging && existing.active) {
-      // Determina se o endpoint resultante terá regras (considera as novas ou as existentes)
       const updatedRules = input.matchingRules !== undefined
         ? input.matchingRules
         : await MatchingRuleService.findByEndpointId(id)
       const updatedHasRules = updatedRules.length > 0
 
       if (!updatedHasRules) {
-        // Sem regras → verifica se já existe outro fallback no destino
         const candidates = await db
           .select({ id: endpoints.id })
           .from(endpoints)
           .where(
             and(
+              eq(endpoints.workspaceId, workspaceId),
               eq(endpoints.method, newMethod),
               eq(endpoints.path, newPath),
               eq(endpoints.active, true),
@@ -186,7 +185,6 @@ export const EndpointService = {
           }
         }
       }
-      // Com regras → pode coexistir livremente com outros endpoints no mesmo method+path
     }
 
     const now = new Date().toISOString()
@@ -220,10 +218,14 @@ export const EndpointService = {
     return { ...rowToEndpoint(updated), matchingRules: rules }
   },
 
-  async toggle(id: string): Promise<Pick<Endpoint, 'id' | 'active' | 'updatedAt'>> {
+  async toggle(id: string, workspaceId: string): Promise<Pick<Endpoint, 'id' | 'active' | 'updatedAt'>> {
     const [existing] = await db.select().from(endpoints).where(eq(endpoints.id, id))
 
     if (!existing) {
+      throw new EndpointServiceError('NOT_FOUND', `Endpoint com id ${id} não encontrado`)
+    }
+
+    if (existing.workspaceId !== workspaceId) {
       throw new EndpointServiceError('NOT_FOUND', `Endpoint com id ${id} não encontrado`)
     }
 
@@ -234,12 +236,12 @@ export const EndpointService = {
       const hasRules = currentRules.length > 0
 
       if (!hasRules) {
-        // Fallback ativando → verifica se já existe outro fallback ativo no mesmo method+path
         const candidates = await db
           .select({ id: endpoints.id })
           .from(endpoints)
           .where(
             and(
+              eq(endpoints.workspaceId, workspaceId),
               eq(endpoints.method, existing.method),
               eq(endpoints.path, existing.path),
               eq(endpoints.active, true),
@@ -262,18 +264,16 @@ export const EndpointService = {
     }
 
     const now = new Date().toISOString()
-
     await db.update(endpoints).set({ active: newActive, updatedAt: now }).where(eq(endpoints.id, id))
 
     return { id, active: newActive, updatedAt: now }
   },
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, workspaceId: string): Promise<boolean> {
     const [existing] = await db.select().from(endpoints).where(eq(endpoints.id, id))
 
-    if (!existing) {
-      return false
-    }
+    if (!existing) return false
+    if (existing.workspaceId !== workspaceId) return false
 
     await db.delete(endpoints).where(eq(endpoints.id, id))
     return true

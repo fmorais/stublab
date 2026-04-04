@@ -27,7 +27,7 @@ async function createEndpoint(
 ) {
   const res = await app.inject({
     method: 'POST',
-    url: '/api/endpoints',
+    url: '/api/workspaces/default/endpoints',
     payload: {
       name: 'Mock endpoint',
       method: 'GET',
@@ -52,7 +52,7 @@ describe('Mock Engine Handler — /mock/*', () => {
       responseBody: '{"ok":true}',
     })
 
-    const res = await app.inject({ method: 'GET', url: '/mock/users' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(res.statusCode).toBe(202)
     expect(res.body).toBe('{"ok":true}')
 
@@ -67,7 +67,7 @@ describe('Mock Engine Handler — /mock/*', () => {
       responseHeaders: { 'X-Custom-Header': 'stub-value', 'Content-Type': 'application/json' },
     })
 
-    const res = await app.inject({ method: 'GET', url: '/mock/users' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(res.statusCode).toBe(200)
     expect(res.headers['x-custom-header']).toBe('stub-value')
     expect(res.headers['content-type']).toContain('application/json')
@@ -79,7 +79,7 @@ describe('Mock Engine Handler — /mock/*', () => {
     const app = await buildApp()
     await app.ready()
 
-    const res = await app.inject({ method: 'GET', url: '/mock/nonexistent' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/nonexistent' })
     expect(res.statusCode).toBe(404)
     expect(res.json()).toEqual({ error: 'No mock found', code: 'MOCK_NOT_FOUND' })
 
@@ -94,10 +94,10 @@ describe('Mock Engine Handler — /mock/*', () => {
 
     await app.inject({
       method: 'PATCH',
-      url: `/api/endpoints/${created.id}/toggle`,
+      url: `/api/workspaces/default/endpoints/${created.id}/toggle`,
     })
 
-    const res = await app.inject({ method: 'GET', url: '/mock/users' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/users' })
     expect(res.statusCode).toBe(404)
     expect(res.json().code).toBe('MOCK_NOT_FOUND')
 
@@ -110,10 +110,10 @@ describe('Mock Engine Handler — /mock/*', () => {
 
     await createEndpoint(app, { method: 'POST', path: '/items', responseStatus: 201 })
 
-    const okRes = await app.inject({ method: 'POST', url: '/mock/items' })
+    const okRes = await app.inject({ method: 'POST', url: '/mock/default/items' })
     expect(okRes.statusCode).toBe(201)
 
-    const failRes = await app.inject({ method: 'GET', url: '/mock/items' })
+    const failRes = await app.inject({ method: 'GET', url: '/mock/default/items' })
     expect(failRes.statusCode).toBe(404)
     expect(failRes.json().code).toBe('MOCK_NOT_FOUND')
 
@@ -127,7 +127,7 @@ describe('Mock Engine Handler — /mock/*', () => {
     await createEndpoint(app, { delay: 80 })
 
     const start = Date.now()
-    const res = await app.inject({ method: 'GET', url: '/mock/users' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/users' })
     const elapsed = Date.now() - start
 
     expect(res.statusCode).toBe(200)
@@ -146,7 +146,7 @@ describe('Mock Engine Handler — /mock/*', () => {
       responseBody: '{"found":true}',
     })
 
-    const res = await app.inject({ method: 'GET', url: '/mock/users/42' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/users/42' })
     expect(res.statusCode).toBe(200)
     expect(res.body).toBe('{"found":true}')
 
@@ -171,7 +171,7 @@ describe('Mock Engine Handler — /mock/*', () => {
       responseBody: '{"type":"static"}',
     })
 
-    const res = await app.inject({ method: 'GET', url: '/mock/users/me' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/users/me' })
     expect(res.statusCode).toBe(200)
     expect(res.body).toBe('{"type":"static"}')
 
@@ -193,7 +193,7 @@ describe('Mock Engine Handler — /mock/*', () => {
       ],
     })
 
-    const res = await app.inject({ method: 'GET', url: '/mock/catalog?category=books' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/catalog?category=books' })
     expect(res.statusCode).toBe(200)
     expect(res.body).toBe('{"filtered":true}')
 
@@ -216,7 +216,7 @@ describe('Mock Engine Handler — /mock/*', () => {
     })
 
     // Sem o query param correto — regra não satisfeita, nenhum fallback → 404
-    const res = await app.inject({ method: 'GET', url: '/mock/catalog?category=electronics' })
+    const res = await app.inject({ method: 'GET', url: '/mock/default/catalog?category=electronics' })
     expect(res.statusCode).toBe(404)
     expect(res.json().code).toBe('MOCK_NOT_FOUND')
 
@@ -240,7 +240,7 @@ describe('Mock Engine Handler — /mock/*', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/mock/tenant-data',
+      url: '/mock/default/tenant-data',
       headers: { 'x-tenant-id': 'acme' },
     })
     expect(res.statusCode).toBe(200)
@@ -266,7 +266,7 @@ describe('Mock Engine Handler — /mock/*', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/mock/tenant-data',
+      url: '/mock/default/tenant-data',
       headers: { 'x-tenant-id': 'other' },
     })
     expect(res.statusCode).toBe(404)
@@ -292,7 +292,7 @@ describe('Mock Engine Handler — /mock/*', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/mock/payments',
+      url: '/mock/default/payments',
       headers: { 'content-type': 'application/json' },
       payload: { type: 'pix', amount: 100 },
     })
@@ -320,7 +320,7 @@ describe('Mock Engine Handler — /mock/*', () => {
     // Content-Type não é application/json — body tratado como null
     const res = await app.inject({
       method: 'POST',
-      url: '/mock/data-upload',
+      url: '/mock/default/data-upload',
       headers: { 'content-type': 'text/plain' },
       payload: 'type=json',
     })

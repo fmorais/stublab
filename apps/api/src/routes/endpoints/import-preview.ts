@@ -11,7 +11,7 @@ export async function importPreviewRoute(app: FastifyInstance) {
     }
 
     try {
-      const preview = await ImportExportService.previewImport(body.data.data)
+      const preview = await ImportExportService.previewImport(request.workspace.id, body.data.data)
       return reply.status(200).send(preview)
     } catch (err) {
       request.log.error(err)

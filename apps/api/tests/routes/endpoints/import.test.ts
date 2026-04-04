@@ -27,7 +27,7 @@ async function createEndpoint(
 ) {
   const res = await app.inject({
     method: 'POST',
-    url: '/api/endpoints',
+    url: '/api/workspaces/default/endpoints',
     payload: {
       name: 'Test endpoint',
       method: 'GET',
@@ -64,7 +64,7 @@ function buildValidEndpoint(overrides: Record<string, unknown> = {}): Record<str
   }
 }
 
-describe('POST /api/endpoints/import/preview', () => {
+describe('POST /api/workspaces/:slug/endpoints/import/preview', () => {
   it('retorna preview de arquivo válido sem conflitos com summary new=2', async () => {
     const app = await buildApp()
     await app.ready()
@@ -76,7 +76,7 @@ describe('POST /api/endpoints/import/preview', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import/preview',
+      url: '/api/workspaces/default/endpoints/import/preview',
       payload: { data },
     })
 
@@ -108,7 +108,7 @@ describe('POST /api/endpoints/import/preview', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import/preview',
+      url: '/api/workspaces/default/endpoints/import/preview',
       payload: { data },
     })
 
@@ -132,7 +132,7 @@ describe('POST /api/endpoints/import/preview', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import/preview',
+      url: '/api/workspaces/default/endpoints/import/preview',
       payload: { data },
     })
 
@@ -153,7 +153,7 @@ describe('POST /api/endpoints/import/preview', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import/preview',
+      url: '/api/workspaces/default/endpoints/import/preview',
       payload: { endpoints: [] },
     })
 
@@ -165,7 +165,7 @@ describe('POST /api/endpoints/import/preview', () => {
   })
 })
 
-describe('POST /api/endpoints/import — estratégia skip', () => {
+describe('POST /api/workspaces/:slug/endpoints/import — estratégia skip', () => {
   it('cria novos endpoints e ignora os que já existem', async () => {
     const app = await buildApp()
     await app.ready()
@@ -179,7 +179,7 @@ describe('POST /api/endpoints/import — estratégia skip', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import',
+      url: '/api/workspaces/default/endpoints/import',
       payload: { data, strategy: 'skip' },
     })
 
@@ -194,7 +194,7 @@ describe('POST /api/endpoints/import — estratégia skip', () => {
   })
 })
 
-describe('POST /api/endpoints/import — estratégia overwrite', () => {
+describe('POST /api/workspaces/:slug/endpoints/import — estratégia overwrite', () => {
   it('atualiza endpoints existentes com os dados do arquivo', async () => {
     const app = await buildApp()
     await app.ready()
@@ -211,7 +211,7 @@ describe('POST /api/endpoints/import — estratégia overwrite', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import',
+      url: '/api/workspaces/default/endpoints/import',
       payload: { data, strategy: 'overwrite' },
     })
 
@@ -224,7 +224,7 @@ describe('POST /api/endpoints/import — estratégia overwrite', () => {
 
     const listRes = await app.inject({
       method: 'GET',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
     })
     const listBody = listRes.json()
     const updated = listBody.data.find(
@@ -238,7 +238,7 @@ describe('POST /api/endpoints/import — estratégia overwrite', () => {
   })
 })
 
-describe('POST /api/endpoints/import — estratégia duplicate', () => {
+describe('POST /api/workspaces/:slug/endpoints/import — estratégia duplicate', () => {
   it('cria novo endpoint mesmo quando já existe um com mesmo method+path', async () => {
     const app = await buildApp()
     await app.ready()
@@ -251,7 +251,7 @@ describe('POST /api/endpoints/import — estratégia duplicate', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import',
+      url: '/api/workspaces/default/endpoints/import',
       payload: { data, strategy: 'duplicate' },
     })
 
@@ -262,7 +262,7 @@ describe('POST /api/endpoints/import — estratégia duplicate', () => {
     expect(body.skipped).toBe(0)
     expect(body.errors).toEqual([])
 
-    const listRes = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    const listRes = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints' })
     const listBody = listRes.json()
     const duplicates = listBody.data.filter(
       (ep: { method: string; path: string }) =>
@@ -274,7 +274,7 @@ describe('POST /api/endpoints/import — estratégia duplicate', () => {
   })
 })
 
-describe('POST /api/endpoints/import — validação', () => {
+describe('POST /api/workspaces/:slug/endpoints/import — validação', () => {
   it('retorna 400 com code INVALID_FORMAT quando body não tem campo strategy', async () => {
     const app = await buildApp()
     await app.ready()
@@ -283,7 +283,7 @@ describe('POST /api/endpoints/import — validação', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import',
+      url: '/api/workspaces/default/endpoints/import',
       payload: { data },
     })
 
@@ -310,7 +310,7 @@ describe('POST /api/endpoints/import — validação', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints/import',
+      url: '/api/workspaces/default/endpoints/import',
       payload: { data, strategy: 'skip' },
     })
 
@@ -320,7 +320,7 @@ describe('POST /api/endpoints/import — validação', () => {
     expect(res.json().code).toBe('IMPORT_FAILED')
 
     // Nenhum endpoint criado — a transação não chegou a executar
-    const listRes = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    const listRes = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints' })
     expect(listRes.json().data).toHaveLength(0)
 
     await app.close()

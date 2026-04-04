@@ -1,7 +1,7 @@
 import { eq, and, inArray } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { db } from '../db/index.js'
-import { endpoints, matchingRules as matchingRulesTable } from '../db/schema.js'
+import { endpoints, matchingRules as matchingRulesTable, workspaces } from '../db/schema.js'
 import { MatchingRuleService } from './matching-rule-service.js'
 import { exportedEndpointSchema } from '../schemas/import-export.js'
 import type { ExportFile, ExportedEndpoint, ImportStrategy, LooseExportFile } from '../schemas/import-export.js'
@@ -27,6 +27,7 @@ export interface ImportPreviewItem {
 export interface ImportPreviewResult {
   valid: boolean
   version: string
+  sourceWorkspace?: { name: string; slug: string }
   totalInFile: number
   preview: ImportPreviewItem[]
   summary: { new: number; conflict: number; invalid: number }
@@ -40,11 +41,14 @@ export interface ImportResult {
 }
 
 export const ImportExportService = {
-  async exportEndpoints(ids?: string[]): Promise<ExportFile> {
+  async exportEndpoints(workspaceId: string, ids?: string[]): Promise<ExportFile> {
     let rows: (typeof endpoints.$inferSelect)[]
 
     if (ids !== undefined && ids.length > 0) {
-      rows = await db.select().from(endpoints).where(inArray(endpoints.id, ids))
+      rows = await db
+        .select()
+        .from(endpoints)
+        .where(and(inArray(endpoints.id, ids), eq(endpoints.workspaceId, workspaceId)))
 
       const foundIds = new Set(rows.map((r) => r.id))
       const missingId = ids.find((id) => !foundIds.has(id))
@@ -54,13 +58,15 @@ export const ImportExportService = {
     } else if (ids !== undefined && ids.length === 0) {
       rows = []
     } else {
-      rows = await db.select().from(endpoints)
+      rows = await db.select().from(endpoints).where(eq(endpoints.workspaceId, workspaceId))
     }
 
     const allIds = rows.map((r) => r.id)
     const rulesMap = await MatchingRuleService.findByEndpointIds(allIds)
 
-    const exportedEndpoints: ExportedEndpoint[] = rows.map((row) => {
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId))
+
+    const exportedEndpointsList: ExportedEndpoint[] = rows.map((row) => {
       const rules = rulesMap.get(row.id) ?? []
       return {
         name: row.name,
@@ -81,21 +87,22 @@ export const ImportExportService = {
     })
 
     return {
-      version: '1',
+      version: '2',
       exportedAt: new Date().toISOString(),
       exportedBy: 'StubLab',
-      count: exportedEndpoints.length,
-      endpoints: exportedEndpoints,
+      workspace: workspace ? { name: workspace.name, slug: workspace.slug } : undefined,
+      count: exportedEndpointsList.length,
+      endpoints: exportedEndpointsList,
     }
   },
 
-  async previewImport(data: LooseExportFile): Promise<ImportPreviewResult> {
-    // Por que: pré-carregar todos os endpoints existentes evita N+1 queries no loop.
-    // Agrupa por method:path mantendo o mais recente (createdAt DESC) como representante
-    // — mesmo critério usado em executeImport para overwrite determinístico.
+  async previewImport(workspaceId: string, data: LooseExportFile): Promise<ImportPreviewResult> {
+    // Por que: pré-carregar todos os endpoints do workspace evita N+1 queries no loop.
+    // Conflitos são detectados apenas dentro do workspace de destino.
     const allExisting = await db
       .select({ id: endpoints.id, method: endpoints.method, path: endpoints.path, createdAt: endpoints.createdAt })
       .from(endpoints)
+      .where(eq(endpoints.workspaceId, workspaceId))
 
     const existingMap = new Map<string, string>() // key → existingId (mais recente)
     for (const row of allExisting) {
@@ -104,7 +111,6 @@ export const ImportExportService = {
       if (!current) {
         existingMap.set(key, row.id)
       }
-      // Mantém o mais recente por createdAt
       const currentRow = allExisting.find((r) => r.id === current)
       if (currentRow && row.createdAt > currentRow.createdAt) {
         existingMap.set(key, row.id)
@@ -168,20 +174,19 @@ export const ImportExportService = {
     return {
       valid: summary.invalid === 0,
       version: data.version,
+      sourceWorkspace: data.workspace,
       totalInFile: data.endpoints.length,
       preview,
       summary,
     }
   },
 
-  async executeImport(data: ExportFile, strategy: ImportStrategy): Promise<ImportResult> {
-    // Por que: pré-carrega todos os endpoints existentes para evitar queries dentro da transação.
-    // Agrupa por method:path, mantendo o mais recente (createdAt DESC) para overwrite determinístico.
-    // Múltiplos endpoints com mesmo method+path são válidos (spec-002), mas para import
-    // "overwrite" precisamos de um alvo único — escolhemos o mais recente.
+  async executeImport(workspaceId: string, data: ExportFile, strategy: ImportStrategy): Promise<ImportResult> {
+    // Por que: pré-carrega todos os endpoints do workspace de destino para evitar queries dentro da transação.
     const allExisting = await db
       .select({ id: endpoints.id, method: endpoints.method, path: endpoints.path, createdAt: endpoints.createdAt })
       .from(endpoints)
+      .where(eq(endpoints.workspaceId, workspaceId))
 
     const existingMap = new Map<string, string>() // key → id do mais recente
     for (const row of allExisting) {
@@ -217,15 +222,13 @@ export const ImportExportService = {
           const id = uuidv4()
           tx.insert(endpoints).values({
             id,
+            workspaceId,
             name: ep.name,
             method: ep.method,
             path: ep.path,
             active: ep.active,
             responseStatus: ep.responseStatus,
             responseBody: ep.responseBody,
-            // Por que: a coluna responseHeaders tem mode:'json' no schema Drizzle,
-            // então o driver serializa/deserializa automaticamente. Passar o objeto
-            // diretamente evita double-serialization (string JSON dentro de JSON).
             responseHeaders: ep.responseHeaders as unknown as string,
             delay: ep.delay,
             createdAt: now,
@@ -271,6 +274,7 @@ export const ImportExportService = {
             const id = uuidv4()
             tx.insert(endpoints).values({
               id,
+              workspaceId,
               name: ep.name,
               method: ep.method,
               path: ep.path,
@@ -300,6 +304,7 @@ export const ImportExportService = {
           const id = uuidv4()
           tx.insert(endpoints).values({
             id,
+            workspaceId,
             name: ep.name,
             method: ep.method,
             path: ep.path,

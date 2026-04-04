@@ -15,7 +15,7 @@ export async function deleteEndpointRoute(app: FastifyInstance) {
     const { id } = params.data
 
     try {
-      const deleted = await EndpointService.delete(id)
+      const deleted = await EndpointService.delete(id, request.workspace.id)
       if (!deleted) {
         return reply.status(404).send({ error: `Endpoint com id ${id} não encontrado`, code: 'NOT_FOUND' })
       }

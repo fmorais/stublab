@@ -23,7 +23,7 @@ export async function exportEndpointsRoute(app: FastifyInstance) {
     }
 
     try {
-      const data = await ImportExportService.exportEndpoints(ids)
+      const data = await ImportExportService.exportEndpoints(request.workspace.id, ids)
       return reply.status(200).send(data)
     } catch (err) {
       if (err instanceof ImportExportServiceError) {

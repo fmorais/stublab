@@ -23,8 +23,11 @@ beforeEach(() => {
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
 
+const DEFAULT_WS = '00000000-0000-0000-0000-000000000001'
+
 async function createEndpoint(path = '/test') {
   return EndpointService.create({
+    workspaceId: DEFAULT_WS,
     name: 'Test Endpoint',
     method: 'GET',
     path,

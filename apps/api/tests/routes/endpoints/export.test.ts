@@ -27,7 +27,7 @@ async function createEndpoint(
 ) {
   const res = await app.inject({
     method: 'POST',
-    url: '/api/endpoints',
+    url: '/api/workspaces/default/endpoints',
     payload: {
       name: 'Test endpoint',
       method: 'GET',
@@ -39,7 +39,7 @@ async function createEndpoint(
   return res.json()
 }
 
-describe('GET /api/endpoints/export', () => {
+describe('GET /api/workspaces/:slug/endpoints/export', () => {
   it('exporta todos os endpoints quando nenhum ID é fornecido', async () => {
     const app = await buildApp()
     await app.ready()
@@ -47,11 +47,11 @@ describe('GET /api/endpoints/export', () => {
     await createEndpoint(app, { name: 'Endpoint A', method: 'GET', path: '/endpoint-a' })
     await createEndpoint(app, { name: 'Endpoint B', method: 'POST', path: '/endpoint-b' })
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints/export' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints/export' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body.version).toBe('1')
+    expect(body.version).toBe('2')
     expect(body.exportedBy).toBe('StubLab')
     expect(body.exportedAt).toBeTruthy()
     expect(body.count).toBe(2)
@@ -84,7 +84,7 @@ describe('GET /api/endpoints/export', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: `/api/endpoints/export?ids=${ep1.id}`,
+      url: `/api/workspaces/default/endpoints/export?ids=${ep1.id}`,
     })
 
     expect(res.statusCode).toBe(200)
@@ -110,7 +110,7 @@ describe('GET /api/endpoints/export', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: `/api/endpoints/export?ids=${ep.id}`,
+      url: `/api/workspaces/default/endpoints/export?ids=${ep.id}`,
     })
 
     expect(res.statusCode).toBe(200)
@@ -137,7 +137,7 @@ describe('GET /api/endpoints/export', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/api/endpoints/export?ids=00000000-0000-0000-0000-000000000000',
+      url: '/api/workspaces/default/endpoints/export?ids=00000000-0000-0000-0000-000000000000',
     })
 
     expect(res.statusCode).toBe(404)
@@ -153,7 +153,7 @@ describe('GET /api/endpoints/export', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/api/endpoints/export?ids=not-a-uuid',
+      url: '/api/workspaces/default/endpoints/export?ids=not-a-uuid',
     })
 
     expect(res.statusCode).toBe(400)
@@ -167,7 +167,7 @@ describe('GET /api/endpoints/export', () => {
     const app = await buildApp()
     await app.ready()
 
-    const res = await app.inject({ method: 'GET', url: '/api/endpoints/export' })
+    const res = await app.inject({ method: 'GET', url: '/api/workspaces/default/endpoints/export' })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()

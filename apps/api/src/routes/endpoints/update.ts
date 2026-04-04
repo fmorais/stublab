@@ -32,7 +32,7 @@ export async function updateEndpointRoute(app: FastifyInstance) {
     }
 
     try {
-      const endpoint = await EndpointService.update(id, body.data)
+      const endpoint = await EndpointService.update(id, request.workspace.id, body.data)
       return reply.status(200).send(endpoint)
     } catch (err) {
       if (err instanceof EndpointServiceError) {
