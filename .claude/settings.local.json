@@ -15,7 +15,10 @@
       "Bash(pnpm test:*)",
       "Bash(git merge:*)",
       "Bash(pnpm add:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(grep -v \"//.*any\")",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

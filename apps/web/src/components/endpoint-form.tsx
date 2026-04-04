@@ -92,9 +92,11 @@ export function EndpointForm({
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: {
       name: defaultValues?.name ?? '',
       method: defaultValues?.method ?? 'GET',
@@ -276,12 +278,19 @@ export function EndpointForm({
           <Controller
             control={control}
             name="responseBody"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <JsonEditor
                 value={field.value ?? '{}'}
-                onChange={field.onChange}
+                onChange={(value) => {
+                  field.onChange(value)
+                  void trigger('responseBody')
+                }}
+                onBlur={() => {
+                  field.onBlur()
+                  void trigger('responseBody')
+                }}
                 placeholder='{"status": "ok"}'
-                hasError={!!errors.responseBody}
+                hasError={fieldState.invalid}
               />
             )}
           />
@@ -317,7 +326,7 @@ export function EndpointForm({
             Cancelar
           </Button>
         )}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || !!errors.responseBody}>
           {pending ? 'Salvando...' : submitLabel}
         </Button>
       </div>

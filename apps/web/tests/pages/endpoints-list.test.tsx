@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { EndpointsList } from '@web/pages/endpoints-list'
 import type { Endpoint } from '@web/types/endpoint'
 
@@ -15,6 +16,14 @@ vi.mock('@web/hooks/use-toggle-endpoint', () => ({
 
 vi.mock('@web/hooks/use-delete-endpoint', () => ({
   useDeleteEndpoint: vi.fn(),
+}))
+
+vi.mock('@web/hooks/use-export-endpoints', () => ({
+  useExportEndpoints: vi.fn(() => ({ exportAll: vi.fn(), exportSelected: vi.fn() })),
+}))
+
+vi.mock('@web/components/import-modal', () => ({
+  ImportModal: () => null,
 }))
 
 import { useEndpoints } from '@web/hooks/use-endpoints'
@@ -42,10 +51,13 @@ const makeEndpoint = (overrides: Partial<Endpoint> = {}): Endpoint => ({
 })
 
 function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <EndpointsList />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <EndpointsList />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
