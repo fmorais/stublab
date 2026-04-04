@@ -6,6 +6,9 @@ interface EndpointTableProps {
   onEdit?: (endpoint: Endpoint) => void
   onDelete?: (endpoint: Endpoint) => void
   onToggleActive?: (endpoint: Endpoint) => void
+  selectable?: boolean
+  selectedIds?: string[]
+  onSelectionChange?: (ids: string[]) => void
 }
 
 const METHOD_COLORS: Record<string, string> = {
@@ -22,7 +25,34 @@ export function EndpointTable({
   onEdit,
   onDelete,
   onToggleActive,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
 }: EndpointTableProps) {
+  const allSelected = endpoints.length > 0 && endpoints.every((ep) => selectedIds.includes(ep.id))
+  const someSelected = endpoints.some((ep) => selectedIds.includes(ep.id))
+
+  function handleSelectAll() {
+    if (!onSelectionChange) return
+    if (allSelected) {
+      onSelectionChange(selectedIds.filter((id) => !endpoints.some((ep) => ep.id === id)))
+    } else {
+      const newIds = [...selectedIds]
+      for (const ep of endpoints) {
+        if (!newIds.includes(ep.id)) newIds.push(ep.id)
+      }
+      onSelectionChange(newIds)
+    }
+  }
+
+  function handleSelectOne(id: string) {
+    if (!onSelectionChange) return
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter((sid) => sid !== id))
+    } else {
+      onSelectionChange([...selectedIds, id])
+    }
+  }
   if (endpoints.length === 0) {
     return (
       <div className="rounded-md border border-input py-12 text-center">
@@ -36,6 +66,20 @@ export function EndpointTable({
       <table className="w-full text-sm">
         <thead className="bg-muted/50 border-b border-input">
           <tr>
+            {selectable && (
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  aria-label="Selecionar todos"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected && !allSelected
+                  }}
+                  onChange={handleSelectAll}
+                  className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                />
+              </th>
+            )}
             <th className="text-left px-4 py-3 font-medium text-muted-foreground w-8">
               Status
             </th>
@@ -53,6 +97,17 @@ export function EndpointTable({
         <tbody className="divide-y divide-input">
           {endpoints.map((ep) => (
             <tr key={ep.id} className="hover:bg-muted/30 transition-colors">
+              {selectable && (
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`Selecionar ${ep.name}`}
+                    checked={selectedIds.includes(ep.id)}
+                    onChange={() => handleSelectOne(ep.id)}
+                    className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                  />
+                </td>
+              )}
               {/* Status ativo/inativo */}
               <td className="px-4 py-3">
                 <button

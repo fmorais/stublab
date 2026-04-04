@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useEndpoints } from '@web/hooks/use-endpoints'
 import { useDeleteEndpoint } from '@web/hooks/use-delete-endpoint'
 import { useToggleEndpoint } from '@web/hooks/use-toggle-endpoint'
+import { useExportEndpoints } from '@web/hooks/use-export-endpoints'
 import { EndpointTable } from '@web/components/endpoint-table'
+import { ImportModal } from '@web/components/import-modal'
 import { Button } from '@web/components/ui/button'
 import type { Endpoint } from '@web/types/endpoint'
 
@@ -12,8 +14,11 @@ export function EndpointsList() {
   const { data: endpoints = [], isLoading, isError } = useEndpoints()
   const deleteMutation = useDeleteEndpoint()
   const toggleMutation = useToggleEndpoint()
+  const { exportAll, exportSelected } = useExportEndpoints()
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [toggleError, setToggleError] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   async function handleToggle(endpoint: Endpoint) {
     setTogglingId(endpoint.id)
@@ -63,6 +68,20 @@ export function EndpointsList() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => exportAll()}>
+          Exportar tudo
+        </Button>
+        {selectedIds.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => exportSelected(selectedIds)}>
+            Exportar selecionados ({selectedIds.length})
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
+          Importar
+        </Button>
+      </div>
+
       {toggleError && (
         <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
           <span>{toggleError}</span>
@@ -76,7 +95,12 @@ export function EndpointsList() {
         onEdit={(ep) => navigate(`/endpoints/${ep.id}/edit`)}
         onDelete={handleDelete}
         onToggleActive={handleToggle}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
+
+      <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} />
     </div>
   )
 }
