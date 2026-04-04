@@ -46,17 +46,7 @@ export function MatchingRuleRow({ value, onChange, onRemove, errors }: MatchingR
   const isValueDisabled = VALUELESS_OPERATORS.includes(value.operator as RuleOperator)
 
   function handleSourceChange(source: string) {
-    const newSource = source as RuleSource
-    const currentValue = value.value ?? ''
-    let nextValue = currentValue
-    if (newSource === 'body') {
-      try {
-        JSON.parse(currentValue)
-      } catch {
-        nextValue = ''
-      }
-    }
-    onChange({ ...value, source: newSource, value: nextValue })
+    onChange({ ...value, source: source as RuleSource })
   }
 
   function handleFieldChange(e: React.ChangeEvent<HTMLInputElement>) {

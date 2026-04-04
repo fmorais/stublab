@@ -1,6 +1,6 @@
 # Spec 003 — Editor de código para campos JSON
 
-**Status:** aguardando design (@architect)
+**Status:** concluída — design aprovado em 2026-04-03, implementação e testes entregues
 **Depende de:** Spec 001 (endpoints CRUD) — concluída
 **Relacionada com:** Spec 002 (matching avançado) — campo de valor de regra se beneficia
 **Criado em:** 2025-04
@@ -48,7 +48,8 @@ Critérios de aceitação:
 - E o botão de salvar é desabilitado enquanto o JSON for inválido
 - QUANDO o JSON se tornar válido
 - ENTÃO o erro desaparece imediatamente
-- JSON vazio (`""`) é considerado inválido — o mínimo aceitável é `{}` ou `[]`
+- JSON vazio (`""`) é considerado inválido
+- Qualquer JSON válido é aceito, incluindo objeto (`{}`), array (`[]`) e literais como `null`, `true`, números e strings JSON
 
 **US-03 — Highlight de sintaxe**
 Como desenvolvedor,

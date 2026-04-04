@@ -8,6 +8,7 @@ import { isValidJson } from '@web/lib/json-utils'
 interface JsonEditorProps {
   value: string
   onChange: (value: string) => void
+  onBlur?: () => void
   placeholder?: string
   minHeight?: number
   maxHeight?: number
@@ -38,6 +39,7 @@ const editorTheme = EditorView.theme({
 export function JsonEditor({
   value,
   onChange,
+  onBlur,
   placeholder,
   minHeight = 120,
   maxHeight = 480,
@@ -77,7 +79,8 @@ export function JsonEditor({
         <CodeMirror
           value={value}
           onChange={onChange}
-          extensions={[json(), editorTheme]}
+          extensions={[json(), editorTheme, EditorView.lineWrapping]}
+          onBlur={onBlur}
           placeholder={placeholder}
           readOnly={readOnly}
           basicSetup={{ lineNumbers: false, foldGutter: false }}

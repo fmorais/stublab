@@ -207,6 +207,25 @@ describe('EndpointForm', () => {
     })
   })
 
+  it('desabilita o botão "Salvar" com JSON inválido e habilita ao corrigir', async () => {
+    renderForm({ onSubmit: vi.fn() })
+
+    const editor = screen.getByTestId('codemirror-editor')
+    const submitButton = screen.getByRole('button', { name: /salvar/i })
+
+    fireEvent.change(editor, { target: { value: 'bad json' } })
+
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled()
+    })
+
+    fireEvent.change(editor, { target: { value: '{"fixed": true}' } })
+
+    await waitFor(() => {
+      expect(submitButton).toBeEnabled()
+    })
+  })
+
   it('permite submissão após corrigir JSON inválido para válido', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()

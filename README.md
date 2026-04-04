@@ -50,7 +50,7 @@ No YAML files. No restarts. Changes take effect immediately.
 | Layer    | Technology                                      |
 |----------|-------------------------------------------------|
 | Backend  | Node.js 20 · Fastify 5 · Zod · Drizzle ORM     |
-| Database | SQLite (dev/self-hosted) · Postgres (prod)      |
+| Database | SQLite (dev/self-hosted) · Postgres (planned)   |
 | Frontend | React 18 · Vite · Tailwind CSS · shadcn/ui      |
 | Editor   | CodeMirror 6 (`@uiw/react-codemirror`)          |
 | Tests    | Vitest · Supertest · Testing Library            |
