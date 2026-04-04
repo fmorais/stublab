@@ -8,8 +8,8 @@ WORKDIR /app
 # ─── Stage 2: builder ─────────────────────────────────────────────────────────
 FROM base AS builder
 
-# Copiar arquivos de manifest
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Copiar arquivos de manifest e configuração TS raiz
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 
