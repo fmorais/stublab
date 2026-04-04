@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@web/components/ui/select'
+import { JsonEditor } from '@web/components/json-editor'
 
 type RuleSource = typeof RULE_SOURCES[number]
 type RuleOperator = typeof RULE_OPERATORS[number]
@@ -45,7 +46,17 @@ export function MatchingRuleRow({ value, onChange, onRemove, errors }: MatchingR
   const isValueDisabled = VALUELESS_OPERATORS.includes(value.operator as RuleOperator)
 
   function handleSourceChange(source: string) {
-    onChange({ ...value, source: source as RuleSource })
+    const newSource = source as RuleSource
+    const currentValue = value.value ?? ''
+    let nextValue = currentValue
+    if (newSource === 'body') {
+      try {
+        JSON.parse(currentValue)
+      } catch {
+        nextValue = ''
+      }
+    }
+    onChange({ ...value, source: newSource, value: nextValue })
   }
 
   function handleFieldChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -122,14 +133,23 @@ export function MatchingRuleRow({ value, onChange, onRemove, errors }: MatchingR
 
         {/* Valor */}
         <div className="flex flex-col gap-1 flex-1">
-          <Input
-            value={isValueDisabled ? '' : (value.value ?? '')}
-            onChange={handleValueChange}
-            placeholder={isValueDisabled ? '—' : 'valor'}
-            disabled={isValueDisabled}
-            aria-label="Valor"
-            aria-disabled={isValueDisabled}
-          />
+          {value.source === 'body' && !isValueDisabled ? (
+            <JsonEditor
+              value={value.value ?? ''}
+              onChange={(val) => onChange({ ...value, value: val })}
+              minHeight={80}
+              maxHeight={200}
+            />
+          ) : (
+            <Input
+              value={isValueDisabled ? '' : (value.value ?? '')}
+              onChange={handleValueChange}
+              placeholder={isValueDisabled ? '—' : 'valor'}
+              disabled={isValueDisabled}
+              aria-label="Valor"
+              aria-disabled={isValueDisabled}
+            />
+          )}
           {errors?.value && (
             <p className="text-xs text-destructive">{errors.value}</p>
           )}

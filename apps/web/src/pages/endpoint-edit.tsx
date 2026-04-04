@@ -8,21 +8,22 @@ import type { UpdateEndpointInput, CreateEndpointInput } from '@web/types/endpoi
 export function EndpointEdit() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-
-  if (!id) return <Navigate to="/" replace />
-
-  const { data: endpoint, isLoading, isError: loadError } = useEndpoint(id)
+  const { data: endpoint, isLoading, isError: loadError } = useEndpoint(id ?? '')
   const updateMutation = useUpdateEndpoint()
   const deleteMutation = useDeleteEndpoint()
 
+  if (!id) return <Navigate to="/" replace />
+
+  const safeId: string = id
+
   async function handleSubmit(data: CreateEndpointInput | UpdateEndpointInput) {
-    await updateMutation.mutateAsync({ id, data: data as UpdateEndpointInput })
+    await updateMutation.mutateAsync({ id: safeId, data: data as UpdateEndpointInput })
     navigate('/')
   }
 
   async function handleDelete() {
     if (!confirm(`Tem certeza que deseja deletar "${endpoint?.name}"?`)) return
-    await deleteMutation.mutateAsync(id)
+    await deleteMutation.mutateAsync(safeId)
     navigate('/')
   }
 

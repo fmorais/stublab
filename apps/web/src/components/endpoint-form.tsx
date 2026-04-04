@@ -1,4 +1,4 @@
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useFieldArray, useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { matchingRuleSchema } from '@web/schemas/matching-rule'
@@ -16,6 +16,8 @@ import {
 } from '@web/components/ui/select'
 import { MatchingRulesSection } from '@web/components/matching-rules-section'
 import { MatchingRulePreview } from '@web/components/matching-rule-preview'
+import { JsonEditor } from '@web/components/json-editor'
+import { isValidJson } from '@web/lib/json-utils'
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 
@@ -28,7 +30,10 @@ const formSchema = z.object({
     .int()
     .min(100, 'Status mínimo é 100')
     .max(599, 'Status máximo é 599'),
-  responseBody: z.string().optional().default(''),
+  responseBody: z
+    .string()
+    .refine(isValidJson, { message: 'JSON inválido' })
+    .default('{}'),
   delay: z.coerce
     .number({ invalid_type_error: 'Delay deve ser um número' })
     .int()
@@ -95,7 +100,7 @@ export function EndpointForm({
       method: defaultValues?.method ?? 'GET',
       path: defaultValues?.path ?? '/',
       responseStatus: defaultValues?.responseStatus ?? 200,
-      responseBody: defaultValues?.responseBody ?? '',
+      responseBody: defaultValues?.responseBody ?? '{}',
       delay: defaultValues?.delay ?? 0,
       matchingRules: defaultValues?.matchingRules?.map((r) => ({
         source: r.source,
@@ -268,13 +273,17 @@ export function EndpointForm({
         {/* Body */}
         <div className="space-y-1.5">
           <Label htmlFor="responseBody">Body (JSON)</Label>
-          <textarea
-            id="responseBody"
-            rows={6}
-            placeholder='{"status": "ok"}'
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono resize-y"
-            aria-invalid={!!errors.responseBody}
-            {...register('responseBody')}
+          <Controller
+            control={control}
+            name="responseBody"
+            render={({ field }) => (
+              <JsonEditor
+                value={field.value ?? '{}'}
+                onChange={field.onChange}
+                placeholder='{"status": "ok"}'
+                hasError={!!errors.responseBody}
+              />
+            )}
           />
           {errors.responseBody && (
             <p className="text-xs text-destructive">{errors.responseBody.message}</p>
