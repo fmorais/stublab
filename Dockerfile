@@ -38,8 +38,6 @@ RUN pnpm install --frozen-lockfile --prod
 # ─── Stage 4: runtime ─────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Criar usuário não-root
 RUN addgroup -S stublab && adduser -S stublab -G stublab
 
