@@ -1,9 +1,34 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { EndpointForm } from '@web/components/endpoint-form'
 import type { Endpoint } from '@web/types/endpoint'
+
+vi.mock('@uiw/react-codemirror', () => ({
+  default: ({
+    value,
+    onChange,
+    className,
+    style,
+    placeholder,
+  }: {
+    value: string
+    onChange: (v: string) => void
+    className?: string
+    style?: React.CSSProperties
+    placeholder?: string
+  }) => (
+    <textarea
+      data-testid="codemirror-editor"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={className}
+      style={style}
+      placeholder={placeholder}
+    />
+  ),
+}))
 
 function renderForm(props: React.ComponentProps<typeof EndpointForm>) {
   return render(
@@ -125,5 +150,96 @@ describe('EndpointForm', () => {
   it('exibe "Salvando..." quando isPending é true', () => {
     renderForm({ onSubmit: vi.fn(), isPending: true })
     expect(screen.getByRole('button', { name: /salvando/i })).toBeInTheDocument()
+  })
+
+  // T10 — JsonEditor integration cases
+
+  it('formulário inicializa responseBody com "{}"', () => {
+    renderForm({ onSubmit: vi.fn() })
+
+    const editor = screen.getByTestId('codemirror-editor') as HTMLTextAreaElement
+    expect(editor.value).toBe('{}')
+  })
+
+  it('exibe erro "JSON inválido" ao submeter com responseBody inválido', async () => {
+    const user = userEvent.setup()
+    renderForm({ onSubmit: vi.fn() })
+
+    const nameInput = screen.getByPlaceholderText(/Ex: Listar usuários/i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Teste')
+
+    const pathInput = screen.getByPlaceholderText('/api/users/:id')
+    await user.clear(pathInput)
+    await user.type(pathInput, '/teste')
+
+    const editor = screen.getByTestId('codemirror-editor')
+    fireEvent.change(editor, { target: { value: 'invalid json' } })
+
+    await user.click(screen.getByRole('button', { name: /salvar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('JSON inválido')).toBeInTheDocument()
+    })
+  })
+
+  it('exibe classe de erro no editor quando JSON é inválido após submit', async () => {
+    const user = userEvent.setup()
+    renderForm({ onSubmit: vi.fn() })
+
+    const nameInput = screen.getByPlaceholderText(/Ex: Listar usuários/i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Teste')
+
+    const pathInput = screen.getByPlaceholderText('/api/users/:id')
+    await user.clear(pathInput)
+    await user.type(pathInput, '/teste')
+
+    const editor = screen.getByTestId('codemirror-editor')
+    fireEvent.change(editor, { target: { value: 'bad json' } })
+
+    await user.click(screen.getByRole('button', { name: /salvar/i }))
+
+    await waitFor(() => {
+      const editorEl = screen.getByTestId('codemirror-editor')
+      const borderWrapper = editorEl.parentElement as HTMLElement
+      expect(borderWrapper?.className).toMatch(/border-destructive/)
+    })
+  })
+
+  it('permite submissão após corrigir JSON inválido para válido', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    renderForm({ onSubmit })
+
+    const nameInput = screen.getByPlaceholderText(/Ex: Listar usuários/i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Teste')
+
+    const pathInput = screen.getByPlaceholderText('/api/users/:id')
+    await user.clear(pathInput)
+    await user.type(pathInput, '/teste')
+
+    const editor = screen.getByTestId('codemirror-editor')
+
+    // Set invalid JSON first
+    fireEvent.change(editor, { target: { value: 'bad json' } })
+
+    await user.click(screen.getByRole('button', { name: /salvar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('JSON inválido')).toBeInTheDocument()
+    })
+
+    // Fix JSON
+    fireEvent.change(editor, { target: { value: '{"fixed": true}' } })
+
+    await user.click(screen.getByRole('button', { name: /salvar/i }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+      const args = onSubmit.mock.calls[0][0]
+      expect(args.responseBody).toBe('{"fixed": true}')
+    })
   })
 })
