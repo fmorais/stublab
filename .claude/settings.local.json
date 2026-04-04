@@ -16,7 +16,9 @@
       "Bash(git merge:*)",
       "Bash(pnpm add:*)",
       "Bash(node:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -v \"//.*any\")",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }

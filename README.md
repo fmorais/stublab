@@ -68,7 +68,7 @@ No YAML files. No restarts. Changes take effect immediately.
 ### Install
 
 ```bash
-git clone https://github.com/<your-username>/stublab.git
+git clone https://github.com/fmorais/stublab.git
 cd stublab
 pnpm install
 ```

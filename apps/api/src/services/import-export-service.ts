@@ -97,11 +97,12 @@ export const ImportExportService = {
       const parsed = exportedEndpointSchema.safeParse(raw)
 
       if (!parsed.success) {
+        const r = raw as Record<string, unknown>
         preview.push({
           index: i,
-          name: typeof raw.name === 'string' ? raw.name : '',
-          method: typeof raw.method === 'string' ? raw.method : '',
-          path: typeof raw.path === 'string' ? raw.path : '',
+          name: typeof r.name === 'string' ? r.name : '',
+          method: typeof r.method === 'string' ? r.method : '',
+          path: typeof r.path === 'string' ? r.path : '',
           status: 'invalid',
           rulesCount: 0,
           errors: parsed.error.issues.map((issue) => issue.message),
