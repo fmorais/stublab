@@ -33,19 +33,23 @@ open http://localhost:3000
 
 Copie `.env.example` para `.env` e ajuste conforme necessário.
 
-> **Nota:** O arquivo `docker-compose.prod.yml` com suporte a PostgreSQL está planejado para uma futura release.
-
 ---
 
 ## What it does
 
-StubLab lets your team define fake HTTP endpoints through a browser interface. Any request hitting `/mock/*` is matched against your active stubs and returns the configured response — including status code, headers, body, and optional delay.
+StubLab lets your team define fake HTTP endpoints through a browser interface. Any request hitting `/mock/:workspace/*` is matched against your active stubs and returns the configured response — including status code, headers, body, and optional delay.
 
 No YAML files. No restarts. Changes take effect immediately.
 
 ---
 
 ## Features
+
+### Workspaces
+- Organize endpoints into isolated **workspaces**, each with its own URL namespace
+- Create, rename, and delete workspaces via the UI
+- Every mock request is scoped to a workspace: `/mock/:slug/your-path`
+- A `default` workspace is always available and cannot be deleted
 
 ### Endpoint management
 - Create, edit, and delete HTTP stubs via a web UI
@@ -60,6 +64,13 @@ No YAML files. No restarts. Changes take effect immediately.
 - Multiple active stubs can share the same method + path — the one with the most satisfied rules wins
 - Fallback: an endpoint with no rules always matches as a catch-all
 
+### Import / Export
+- Export all or selected endpoints as a JSON file
+- Import endpoints from a previously exported file
+- Three conflict strategies: **skip** (default), **overwrite**, or **duplicate**
+- Preview what will be created/updated/skipped before confirming
+- Export files include workspace metadata (v2 format)
+
 ### JSON editor
 - `responseBody` field is a full code editor (CodeMirror 6) with JSON syntax highlighting
 - Real-time validation — save button disabled while JSON is invalid
@@ -70,7 +81,7 @@ No YAML files. No restarts. Changes take effect immediately.
 - Path params supported (`/api/users/:id`)
 - `delay` field to simulate slow APIs
 - Custom response headers per endpoint
-- 92 tests across API and UI
+- 303 tests across API and UI
 
 ---
 
@@ -84,6 +95,7 @@ No YAML files. No restarts. Changes take effect immediately.
 | Editor   | CodeMirror 6 (`@uiw/react-codemirror`)          |
 | Tests    | Vitest · Supertest · Testing Library            |
 | Language | TypeScript (strict) throughout                  |
+| Deploy   | Docker + docker-compose                         |
 
 ---
 
@@ -128,9 +140,15 @@ pnpm db:migrate
 
 ## Usage
 
-### 1. Create a stub
+### 1. Create a workspace
 
-Open http://localhost:5173, click **Novo endpoint**, and fill in:
+Open http://localhost:5173 and click **Novo workspace**. Give it a name — the slug is auto-generated and used in mock URLs.
+
+A `default` workspace is pre-created so you can start immediately.
+
+### 2. Create a stub
+
+Inside a workspace, click **Novo endpoint** and fill in:
 
 | Field           | Example                       |
 |-----------------|-------------------------------|
@@ -143,14 +161,19 @@ Open http://localhost:5173, click **Novo endpoint**, and fill in:
 
 Click **Salvar**. The stub is immediately active.
 
-### 2. Call your stub
+### 3. Call your stub
 
 ```bash
-curl http://localhost:3000/mock/api/users
+# Using the default workspace
+curl http://localhost:3000/mock/default/api/users
+# → {"users":[]}
+
+# Using a custom workspace slug
+curl http://localhost:3000/mock/my-project/api/users
 # → {"users":[]}
 ```
 
-### 3. Add matching rules (conditional responses)
+### 4. Add matching rules (conditional responses)
 
 To return different responses for the same endpoint based on the request:
 
@@ -166,40 +189,54 @@ To return different responses for the same endpoint based on the request:
 | GET /api/users | _(no rules — fallback)_ | `{"users": []}`                |
 
 ```bash
-curl http://localhost:3000/mock/api/users?env=prod
+curl http://localhost:3000/mock/default/api/users?env=prod
 # → {"users":[{"id":1}]}
 
-curl http://localhost:3000/mock/api/users
+curl http://localhost:3000/mock/default/api/users
 # → {"users":[]}
 ```
 
 The engine scores each candidate by how many rules it satisfies. The highest score wins. Ties are broken by creation date (most recent first).
 
-### 4. Simulate slow responses
+### 5. Simulate slow responses
 
 Set the **Delay** field to any number of milliseconds. The API will wait before responding — useful for testing loading states and timeouts.
 
-```bash
-curl http://localhost:3000/mock/api/slow-endpoint
-# responds after N ms
-```
+### 6. Import / Export
+
+Use the **Exportar** and **Importar** buttons in the endpoint list to backup or migrate stubs between workspaces. Export files include the workspace name and slug as metadata.
 
 ---
 
 ## API reference
 
-All admin endpoints are under `/api`. The mock server listens on `/mock/*`.
+All admin endpoints are under `/api`. The mock server listens on `/mock/:slug/*`.
+
+### Workspaces
+
+| Method | Path                        | Description              |
+|--------|-----------------------------|--------------------------|
+| GET    | `/api/workspaces`           | List all workspaces      |
+| POST   | `/api/workspaces`           | Create workspace         |
+| GET    | `/api/workspaces/:slug`     | Get workspace with stats |
+| PUT    | `/api/workspaces/:slug`     | Update workspace         |
+| DELETE | `/api/workspaces/:slug`     | Delete workspace         |
 
 ### Endpoints CRUD
 
-| Method | Path                    | Description              |
-|--------|-------------------------|--------------------------|
-| GET    | `/api/endpoints`        | List all endpoints       |
-| POST   | `/api/endpoints`        | Create endpoint          |
-| GET    | `/api/endpoints/:id`    | Get single endpoint      |
-| PUT    | `/api/endpoints/:id`    | Update endpoint          |
-| PATCH  | `/api/endpoints/:id/toggle` | Toggle active/inactive |
-| DELETE | `/api/endpoints/:id`    | Delete endpoint          |
+All endpoint routes are scoped to a workspace via its slug:
+
+| Method | Path                                              | Description              |
+|--------|---------------------------------------------------|--------------------------|
+| GET    | `/api/workspaces/:slug/endpoints`                 | List endpoints           |
+| POST   | `/api/workspaces/:slug/endpoints`                 | Create endpoint          |
+| GET    | `/api/workspaces/:slug/endpoints/:id`             | Get single endpoint      |
+| PUT    | `/api/workspaces/:slug/endpoints/:id`             | Update endpoint          |
+| PATCH  | `/api/workspaces/:slug/endpoints/:id/toggle`      | Toggle active/inactive   |
+| DELETE | `/api/workspaces/:slug/endpoints/:id`             | Delete endpoint          |
+| GET    | `/api/workspaces/:slug/endpoints/export`          | Export as JSON           |
+| POST   | `/api/workspaces/:slug/endpoints/import/preview`  | Preview import           |
+| POST   | `/api/workspaces/:slug/endpoints/import`          | Execute import           |
 
 ### Create endpoint — request body
 
@@ -251,7 +288,9 @@ stublab/
 ├── apps/
 │   ├── api/                  # Fastify backend
 │   │   └── src/
-│   │       ├── routes/       # Admin REST routes
+│   │       ├── routes/
+│   │       │   ├── workspaces/   # Workspace CRUD
+│   │       │   └── endpoints/    # Endpoint CRUD + import/export
 │   │       ├── mock/         # Mock engine + rule evaluator
 │   │       ├── services/     # Business logic
 │   │       ├── db/           # Drizzle schema + migrations
@@ -261,7 +300,7 @@ stublab/
 │           ├── pages/        # Route-level components
 │           ├── components/   # UI components
 │           ├── hooks/        # API hooks (React Query)
-│           └── lib/          # Utilities (isValidJson, etc.)
+│           └── lib/          # Utilities
 ├── .claude/
 │   └── specs/                # Feature specs (SDD)
 └── CLAUDE.md                 # Project constitution for AI agents
@@ -314,9 +353,6 @@ cp apps/api/.env.example apps/api/.env
 
 - [ ] Request log — inspect incoming requests matched by the mock engine
 - [ ] JSON schema-based autocomplete in the response body editor
-- [ ] Import/export stubs as JSON
-- [ ] Multi-tenant workspaces
-- [ ] Docker image + `docker-compose.yml`
 - [ ] Postgres support in production
 
 ---
