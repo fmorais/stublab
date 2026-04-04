@@ -90,6 +90,27 @@ export const ImportExportService = {
   },
 
   async previewImport(data: LooseExportFile): Promise<ImportPreviewResult> {
+    // Por que: pré-carregar todos os endpoints existentes evita N+1 queries no loop.
+    // Agrupa por method:path mantendo o mais recente (createdAt DESC) como representante
+    // — mesmo critério usado em executeImport para overwrite determinístico.
+    const allExisting = await db
+      .select({ id: endpoints.id, method: endpoints.method, path: endpoints.path, createdAt: endpoints.createdAt })
+      .from(endpoints)
+
+    const existingMap = new Map<string, string>() // key → existingId (mais recente)
+    for (const row of allExisting) {
+      const key = `${row.method}:${row.path}`
+      const current = existingMap.get(key)
+      if (!current) {
+        existingMap.set(key, row.id)
+      }
+      // Mantém o mais recente por createdAt
+      const currentRow = allExisting.find((r) => r.id === current)
+      if (currentRow && row.createdAt > currentRow.createdAt) {
+        existingMap.set(key, row.id)
+      }
+    }
+
     const preview: ImportPreviewItem[] = []
 
     for (let i = 0; i < data.endpoints.length; i++) {
@@ -111,20 +132,17 @@ export const ImportExportService = {
       }
 
       const ep = parsed.data
+      const key = `${ep.method}:${ep.path}`
+      const existingId = existingMap.get(key)
 
-      const existing = await db
-        .select({ id: endpoints.id })
-        .from(endpoints)
-        .where(and(eq(endpoints.method, ep.method), eq(endpoints.path, ep.path)))
-
-      if (existing.length > 0) {
+      if (existingId) {
         preview.push({
           index: i,
           name: ep.name,
           method: ep.method,
           path: ep.path,
           status: 'conflict',
-          existingId: existing[0].id,
+          existingId,
           rulesCount: ep.matchingRules.length,
           errors: [],
         })
@@ -157,144 +175,158 @@ export const ImportExportService = {
   },
 
   async executeImport(data: ExportFile, strategy: ImportStrategy): Promise<ImportResult> {
-    // Pre-fetch all existing endpoints for conflict detection
-    const allExisting = await db.select().from(endpoints)
+    // Por que: pré-carrega todos os endpoints existentes para evitar queries dentro da transação.
+    // Agrupa por method:path, mantendo o mais recente (createdAt DESC) para overwrite determinístico.
+    // Múltiplos endpoints com mesmo method+path são válidos (spec-002), mas para import
+    // "overwrite" precisamos de um alvo único — escolhemos o mais recente.
+    const allExisting = await db
+      .select({ id: endpoints.id, method: endpoints.method, path: endpoints.path, createdAt: endpoints.createdAt })
+      .from(endpoints)
 
-    const existingMap = new Map<string, typeof endpoints.$inferSelect>()
+    const existingMap = new Map<string, string>() // key → id do mais recente
     for (const row of allExisting) {
-      existingMap.set(`${row.method}:${row.path}`, row)
+      const key = `${row.method}:${row.path}`
+      const currentId = existingMap.get(key)
+      if (!currentId) {
+        existingMap.set(key, row.id)
+        continue
+      }
+      const currentRow = allExisting.find((r) => r.id === currentId)
+      if (currentRow && row.createdAt > currentRow.createdAt) {
+        existingMap.set(key, row.id)
+      }
     }
 
-    // Por que: better-sqlite3 é síncrono. db.transaction() executa e retorna o resultado diretamente.
+    // Por que: better-sqlite3 é síncrono. db.transaction() executa e faz rollback automático
+    // se qualquer erro for lançado. Não há try/catch por item — qualquer falha aborta tudo.
     const txResult = db.transaction((tx) => {
-      const accumulator: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] }
+      let created = 0
+      let updated = 0
+      let skipped = 0
       const now = new Date().toISOString()
 
-      for (let i = 0; i < data.endpoints.length; i++) {
-        const ep = data.endpoints[i]
+      for (const ep of data.endpoints) {
         const key = `${ep.method}:${ep.path}`
-        const existing = existingMap.get(key)
+        const existingId = existingMap.get(key)
 
-        try {
-          if (strategy === 'skip') {
-            if (existing) {
-              accumulator.skipped++
-              continue
-            }
-            const id = uuidv4()
-            tx.insert(endpoints).values({
-              id,
-              name: ep.name,
-              method: ep.method,
-              path: ep.path,
-              active: ep.active,
-              responseStatus: ep.responseStatus,
-              responseBody: ep.responseBody,
-              responseHeaders: JSON.stringify(ep.responseHeaders),
-              delay: ep.delay,
-              createdAt: now,
-              updatedAt: now,
-            }).run()
-            for (const rule of ep.matchingRules) {
-              tx.insert(matchingRulesTable).values({
-                id: uuidv4(),
-                endpointId: id,
-                source: rule.source,
-                field: rule.field,
-                operator: rule.operator,
-                value: rule.value ?? null,
-                createdAt: now,
-              }).run()
-            }
-            accumulator.created++
-          } else if (strategy === 'overwrite') {
-            if (existing) {
-              tx.update(endpoints).set({
-                name: ep.name,
-                active: ep.active,
-                responseStatus: ep.responseStatus,
-                responseBody: ep.responseBody,
-                responseHeaders: JSON.stringify(ep.responseHeaders),
-                delay: ep.delay,
-                updatedAt: now,
-              }).where(eq(endpoints.id, existing.id)).run()
-              tx.delete(matchingRulesTable).where(eq(matchingRulesTable.endpointId, existing.id)).run()
-              for (const rule of ep.matchingRules) {
-                tx.insert(matchingRulesTable).values({
-                  id: uuidv4(),
-                  endpointId: existing.id,
-                  source: rule.source,
-                  field: rule.field,
-                  operator: rule.operator,
-                  value: rule.value ?? null,
-                  createdAt: now,
-                }).run()
-              }
-              accumulator.updated++
-            } else {
-              const id = uuidv4()
-              tx.insert(endpoints).values({
-                id,
-                name: ep.name,
-                method: ep.method,
-                path: ep.path,
-                active: ep.active,
-                responseStatus: ep.responseStatus,
-                responseBody: ep.responseBody,
-                responseHeaders: JSON.stringify(ep.responseHeaders),
-                delay: ep.delay,
-                createdAt: now,
-                updatedAt: now,
-              }).run()
-              for (const rule of ep.matchingRules) {
-                tx.insert(matchingRulesTable).values({
-                  id: uuidv4(),
-                  endpointId: id,
-                  source: rule.source,
-                  field: rule.field,
-                  operator: rule.operator,
-                  value: rule.value ?? null,
-                  createdAt: now,
-                }).run()
-              }
-              accumulator.created++
-            }
-          } else {
-            // duplicate
-            const id = uuidv4()
-            tx.insert(endpoints).values({
-              id,
-              name: ep.name,
-              method: ep.method,
-              path: ep.path,
-              active: ep.active,
-              responseStatus: ep.responseStatus,
-              responseBody: ep.responseBody,
-              responseHeaders: JSON.stringify(ep.responseHeaders),
-              delay: ep.delay,
-              createdAt: now,
-              updatedAt: now,
-            }).run()
-            for (const rule of ep.matchingRules) {
-              tx.insert(matchingRulesTable).values({
-                id: uuidv4(),
-                endpointId: id,
-                source: rule.source,
-                field: rule.field,
-                operator: rule.operator,
-                value: rule.value ?? null,
-                createdAt: now,
-              }).run()
-            }
-            accumulator.created++
+        if (strategy === 'skip') {
+          if (existingId) {
+            skipped++
+            continue
           }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'Erro desconhecido'
-          accumulator.errors.push({ index: i, message })
+          const id = uuidv4()
+          tx.insert(endpoints).values({
+            id,
+            name: ep.name,
+            method: ep.method,
+            path: ep.path,
+            active: ep.active,
+            responseStatus: ep.responseStatus,
+            responseBody: ep.responseBody,
+            // Por que: a coluna responseHeaders tem mode:'json' no schema Drizzle,
+            // então o driver serializa/deserializa automaticamente. Passar o objeto
+            // diretamente evita double-serialization (string JSON dentro de JSON).
+            responseHeaders: ep.responseHeaders as unknown as string,
+            delay: ep.delay,
+            createdAt: now,
+            updatedAt: now,
+          }).run()
+          for (const rule of ep.matchingRules) {
+            tx.insert(matchingRulesTable).values({
+              id: uuidv4(),
+              endpointId: id,
+              source: rule.source,
+              field: rule.field,
+              operator: rule.operator,
+              value: rule.value ?? null,
+              createdAt: now,
+            }).run()
+          }
+          created++
+        } else if (strategy === 'overwrite') {
+          if (existingId) {
+            tx.update(endpoints).set({
+              name: ep.name,
+              active: ep.active,
+              responseStatus: ep.responseStatus,
+              responseBody: ep.responseBody,
+              responseHeaders: ep.responseHeaders as unknown as string,
+              delay: ep.delay,
+              updatedAt: now,
+            }).where(eq(endpoints.id, existingId)).run()
+            tx.delete(matchingRulesTable).where(eq(matchingRulesTable.endpointId, existingId)).run()
+            for (const rule of ep.matchingRules) {
+              tx.insert(matchingRulesTable).values({
+                id: uuidv4(),
+                endpointId: existingId,
+                source: rule.source,
+                field: rule.field,
+                operator: rule.operator,
+                value: rule.value ?? null,
+                createdAt: now,
+              }).run()
+            }
+            updated++
+          } else {
+            const id = uuidv4()
+            tx.insert(endpoints).values({
+              id,
+              name: ep.name,
+              method: ep.method,
+              path: ep.path,
+              active: ep.active,
+              responseStatus: ep.responseStatus,
+              responseBody: ep.responseBody,
+              responseHeaders: ep.responseHeaders as unknown as string,
+              delay: ep.delay,
+              createdAt: now,
+              updatedAt: now,
+            }).run()
+            for (const rule of ep.matchingRules) {
+              tx.insert(matchingRulesTable).values({
+                id: uuidv4(),
+                endpointId: id,
+                source: rule.source,
+                field: rule.field,
+                operator: rule.operator,
+                value: rule.value ?? null,
+                createdAt: now,
+              }).run()
+            }
+            created++
+          }
+        } else {
+          // duplicate — sempre cria novo, independente de conflito
+          const id = uuidv4()
+          tx.insert(endpoints).values({
+            id,
+            name: ep.name,
+            method: ep.method,
+            path: ep.path,
+            active: ep.active,
+            responseStatus: ep.responseStatus,
+            responseBody: ep.responseBody,
+            responseHeaders: ep.responseHeaders as unknown as string,
+            delay: ep.delay,
+            createdAt: now,
+            updatedAt: now,
+          }).run()
+          for (const rule of ep.matchingRules) {
+            tx.insert(matchingRulesTable).values({
+              id: uuidv4(),
+              endpointId: id,
+              source: rule.source,
+              field: rule.field,
+              operator: rule.operator,
+              value: rule.value ?? null,
+              createdAt: now,
+            }).run()
+          }
+          created++
         }
       }
 
-      return accumulator
+      return { created, updated, skipped, errors: [] }
     })
 
     return txResult

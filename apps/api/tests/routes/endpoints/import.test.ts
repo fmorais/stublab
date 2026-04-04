@@ -293,4 +293,36 @@ describe('POST /api/endpoints/import — validação', () => {
 
     await app.close()
   })
+
+  it('retorna 500 IMPORT_FAILED e não persiste nada quando a transação lança erro', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    // Por que: simulamos falha na transação via vi.spyOn no testDb.
+    // A rota deve capturar o erro do service e retornar 500 IMPORT_FAILED.
+    // SQLite garante rollback automático quando a transação lança — o spy confirma
+    // que o mecanismo de erro está corretamente conectado da transação até a resposta HTTP.
+    const spy = vi.spyOn(testDb, 'transaction').mockImplementationOnce(() => {
+      throw new Error('Simulated DB failure')
+    })
+
+    const data = buildExportFile([buildValidEndpoint({ path: '/rollback-test' })])
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/endpoints/import',
+      payload: { data, strategy: 'skip' },
+    })
+
+    spy.mockRestore()
+
+    expect(res.statusCode).toBe(500)
+    expect(res.json().code).toBe('IMPORT_FAILED')
+
+    // Nenhum endpoint criado — a transação não chegou a executar
+    const listRes = await app.inject({ method: 'GET', url: '/api/endpoints' })
+    expect(listRes.json().data).toHaveLength(0)
+
+    await app.close()
+  })
 })

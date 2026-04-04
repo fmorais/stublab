@@ -1,5 +1,9 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { ImportExportService, ImportExportServiceError } from '../../services/import-export-service.js'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const uuidSchema = z.string().regex(UUID_REGEX)
 
 export async function exportEndpointsRoute(app: FastifyInstance) {
   app.get('/endpoints/export', async (request, reply) => {
@@ -10,6 +14,10 @@ export async function exportEndpointsRoute(app: FastifyInstance) {
       const parts = query.ids.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
       if (parts.length === 0) {
         return reply.status(400).send({ error: 'Parâmetro ids inválido', code: 'VALIDATION_ERROR' })
+      }
+      const invalidId = parts.find((id) => !uuidSchema.safeParse(id).success)
+      if (invalidId) {
+        return reply.status(400).send({ error: `ID inválido: ${invalidId}`, code: 'VALIDATION_ERROR' })
       }
       ids = parts
     }

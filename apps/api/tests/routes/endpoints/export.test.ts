@@ -147,6 +147,22 @@ describe('GET /api/endpoints/export', () => {
     await app.close()
   })
 
+  it('retorna 400 quando ids contém valor que não é UUID', async () => {
+    const app = await buildApp()
+    await app.ready()
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/endpoints/export?ids=not-a-uuid',
+    })
+
+    expect(res.statusCode).toBe(400)
+    const body = res.json()
+    expect(body.code).toBe('VALIDATION_ERROR')
+
+    await app.close()
+  })
+
   it('retorna count=0 e endpoints=[] quando não há endpoints cadastrados', async () => {
     const app = await buildApp()
     await app.ready()
