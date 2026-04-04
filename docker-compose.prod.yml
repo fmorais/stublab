@@ -1,0 +1,38 @@
+# AVISO: Este arquivo requer suporte a PostgreSQL, ainda não implementado.
+# Use docker-compose.yml com SQLite para a versão atual.
+# Suporte a Postgres está planejado para uma futura release.
+
+services:
+  stublab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-stublab}:${POSTGRES_PASSWORD:-stublab}@postgres:5432/${POSTGRES_DB:-stublab}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-stublab}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-stublab}"
+      POSTGRES_DB: "${POSTGRES_DB:-stublab}"
+    volumes:
+      - stublab_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stublab}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  stublab_pg_data:
