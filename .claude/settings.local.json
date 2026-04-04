@@ -18,7 +18,9 @@
       "Bash(node:*)",
       "Bash(npx tsc:*)",
       "Bash(grep -v \"//.*any\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm tsc:*)"
     ]
   }
 }

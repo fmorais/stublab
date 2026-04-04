@@ -14,5 +14,6 @@ export function rowToEndpoint(row: typeof endpoints.$inferSelect): Endpoint {
     delay: row.delay,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    matchingRules: [],
   }
 }

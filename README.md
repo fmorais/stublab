@@ -8,6 +8,35 @@ A self-hosted mock server with a web UI. Create and manage HTTP stubs without to
 
 ---
 
+## Quick Start with Docker
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/seu-usuario/stublab.git
+cd stublab
+
+# 2. Suba o container
+docker compose up -d
+
+# 3. Acesse a interface
+open http://localhost:3000
+```
+
+### Variáveis de ambiente
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `PORT` | `3000` | Porta exposta |
+| `DATABASE_URL` | `/app/data/stublab.db` | Caminho do banco SQLite |
+| `LOG_LEVEL` | `info` | Nível de log |
+| `NODE_ENV` | `production` | Ambiente |
+
+Copie `.env.example` para `.env` e ajuste conforme necessário.
+
+> **Nota:** O arquivo `docker-compose.prod.yml` com suporte a PostgreSQL está planejado para uma futura release.
+
+---
+
 ## What it does
 
 StubLab lets your team define fake HTTP endpoints through a browser interface. Any request hitting `/mock/*` is matched against your active stubs and returns the configured response — including status code, headers, body, and optional delay.
