@@ -1,24 +1,36 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { useEndpoints } from '@web/hooks/use-endpoints'
 import { useDeleteEndpoint } from '@web/hooks/use-delete-endpoint'
 import { useToggleEndpoint } from '@web/hooks/use-toggle-endpoint'
 import { useExportEndpoints } from '@web/hooks/use-export-endpoints'
+import { useWorkspace } from '@web/hooks/use-workspaces'
 import { EndpointTable } from '@web/components/endpoint-table'
 import { ImportModal } from '@web/components/import-modal'
+import { WorkspaceSelector } from '@web/components/workspace-selector'
+import { WorkspaceEditDialog } from '@web/components/workspace-edit-dialog'
+import { WorkspaceDeleteDialog } from '@web/components/workspace-delete-dialog'
 import { Button } from '@web/components/ui/button'
 import type { Endpoint } from '@web/types/endpoint'
 
 export function EndpointsList() {
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const { data: endpoints = [], isLoading, isError } = useEndpoints()
-  const deleteMutation = useDeleteEndpoint()
-  const toggleMutation = useToggleEndpoint()
-  const { exportAll, exportSelected } = useExportEndpoints()
+
+  const { data: workspace, isLoading: wsLoading } = useWorkspace(slug ?? '')
+  const { data: endpoints = [], isLoading, isError } = useEndpoints(slug ?? '')
+  const deleteMutation = useDeleteEndpoint(slug ?? '')
+  const toggleMutation = useToggleEndpoint(slug ?? '')
+  const { exportAll, exportSelected } = useExportEndpoints(slug ?? '')
+
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [toggleError, setToggleError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  if (!slug) return <Navigate to="/" replace />
 
   async function handleToggle(endpoint: Endpoint) {
     setTogglingId(endpoint.id)
@@ -38,7 +50,7 @@ export function EndpointsList() {
     await deleteMutation.mutateAsync(endpoint.id)
   }
 
-  if (isLoading) {
+  if (isLoading || wsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-sm text-muted-foreground">Carregando...</p>
@@ -56,6 +68,8 @@ export function EndpointsList() {
 
   return (
     <div className="space-y-4">
+      <WorkspaceSelector workspaceName={workspace?.name ?? slug} />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Endpoints</h1>
@@ -63,9 +77,21 @@ export function EndpointsList() {
             {endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''} cadastrado{endpoints.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button onClick={() => navigate('/endpoints/new')}>
-          + Novo endpoint
-        </Button>
+        <div className="flex items-center gap-2">
+          {workspace && workspace.slug !== 'default' && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+                Editar workspace
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                Excluir workspace
+              </Button>
+            </>
+          )}
+          <Button onClick={() => navigate(`/workspaces/${slug}/endpoints/new`)}>
+            + Novo endpoint
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -92,7 +118,7 @@ export function EndpointsList() {
       <EndpointTable
         endpoints={endpoints}
         togglingId={togglingId}
-        onEdit={(ep) => navigate(`/endpoints/${ep.id}/edit`)}
+        onEdit={(ep) => navigate(`/workspaces/${slug}/endpoints/${ep.id}/edit`)}
         onDelete={handleDelete}
         onToggleActive={handleToggle}
         selectable
@@ -100,7 +126,23 @@ export function EndpointsList() {
         onSelectionChange={setSelectedIds}
       />
 
-      <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} />
+      <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} slug={slug} />
+
+      {workspace && (
+        <>
+          <WorkspaceEditDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            workspace={workspace}
+            onUpdated={(newSlug) => navigate(`/workspaces/${newSlug}/endpoints`, { replace: true })}
+          />
+          <WorkspaceDeleteDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            workspace={workspace}
+          />
+        </>
+      )}
     </div>
   )
 }

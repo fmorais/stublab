@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { WorkspaceList } from '@web/pages/workspace-list'
 import { EndpointsList } from '@web/pages/endpoints-list'
 import { EndpointCreate } from '@web/pages/endpoint-create'
 import { EndpointEdit } from '@web/pages/endpoint-edit'
@@ -11,9 +12,11 @@ export default function App() {
       </header>
       <main className="px-6 py-6">
         <Routes>
-          <Route path="/" element={<EndpointsList />} />
-          <Route path="/endpoints/new" element={<EndpointCreate />} />
-          <Route path="/endpoints/:id/edit" element={<EndpointEdit />} />
+          <Route path="/" element={<WorkspaceList />} />
+          <Route path="/workspaces/:slug" element={<Navigate to="endpoints" replace />} />
+          <Route path="/workspaces/:slug/endpoints" element={<EndpointsList />} />
+          <Route path="/workspaces/:slug/endpoints/new" element={<EndpointCreate />} />
+          <Route path="/workspaces/:slug/endpoints/:id/edit" element={<EndpointEdit />} />
         </Routes>
       </main>
     </div>

@@ -53,11 +53,11 @@ function buildFileContent(endpoints: unknown[] = []) {
   })
 }
 
-function renderModal(props: { open?: boolean; onOpenChange?: (v: boolean) => void } = {}) {
+function renderModal(props: { open?: boolean; onOpenChange?: (v: boolean) => void; slug?: string } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <ImportModal open={props.open ?? true} onOpenChange={props.onOpenChange ?? vi.fn()} />
+      <ImportModal open={props.open ?? true} onOpenChange={props.onOpenChange ?? vi.fn()} slug={props.slug ?? 'default'} />
     </QueryClientProvider>,
   )
 }

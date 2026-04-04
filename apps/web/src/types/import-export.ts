@@ -23,6 +23,7 @@ export interface ExportFile {
   exportedBy: string
   count: number
   endpoints: ExportedEndpoint[]
+  workspace?: { name: string; slug: string }
 }
 
 export interface ImportPreviewItem {

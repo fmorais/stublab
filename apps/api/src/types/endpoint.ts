@@ -36,6 +36,7 @@ export interface Endpoint {
 }
 
 export interface CreateEndpointInput {
+  workspaceId: string
   name: string
   method: HttpMethod
   path: string

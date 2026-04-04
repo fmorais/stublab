@@ -21,19 +21,19 @@ beforeEach(() => {
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
 
-describe('GET /api/endpoints/:id', () => {
+describe('GET /api/workspaces/:slug/endpoints/:id', () => {
   it('retorna o endpoint quando id existe', async () => {
     const app = await buildApp()
     await app.ready()
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Meu endpoint', method: 'GET', path: '/test', responseStatus: 200 },
     })
     const { id } = created.json()
 
-    const res = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const res = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -51,7 +51,7 @@ describe('GET /api/endpoints/:id', () => {
 
     const res = await app.inject({
       method: 'GET',
-      url: '/api/endpoints/00000000-0000-0000-0000-000000000000',
+      url: '/api/workspaces/default/endpoints/00000000-0000-0000-0000-000000000000',
     })
 
     expect(res.statusCode).toBe(404)
@@ -66,12 +66,12 @@ describe('GET /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Completo', method: 'POST', path: '/completo', responseStatus: 201 },
     })
     const { id } = created.json()
 
-    const res = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const res = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -91,12 +91,12 @@ describe('GET /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Com regras', method: 'GET', path: '/com-regras-get', responseStatus: 200 },
     })
     const { id } = created.json()
 
-    const res = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const res = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()
@@ -111,7 +111,7 @@ describe('GET /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Com regra body',
         method: 'POST',
@@ -122,7 +122,7 @@ describe('GET /api/endpoints/:id', () => {
     })
     const { id } = created.json()
 
-    const res = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const res = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
 
     expect(res.statusCode).toBe(200)
     const body = res.json()

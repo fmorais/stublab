@@ -17,10 +17,16 @@ export const exportedEndpointSchema = z.object({
   })).default([]),
 })
 
+// Por que: version "2" inclui metadados de workspace. O campo workspace é opcional
+// para compatibilidade com arquivos version "1" exportados antes desta spec.
 export const exportFileSchema = z.object({
   version: z.string(),
   exportedAt: z.string(),
   exportedBy: z.string(),
+  workspace: z.object({
+    name: z.string(),
+    slug: z.string(),
+  }).optional(),
   count: z.number().int().min(0),
   endpoints: z.array(exportedEndpointSchema).max(1000),
 })
@@ -33,6 +39,10 @@ export const looseExportFileSchema = z.object({
   version: z.string(),
   exportedAt: z.string(),
   exportedBy: z.string(),
+  workspace: z.object({
+    name: z.string(),
+    slug: z.string(),
+  }).optional(),
   count: z.number().int().min(0),
   endpoints: z.array(z.unknown()).max(1000),
 })

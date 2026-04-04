@@ -21,11 +21,12 @@ import type { ExportFile, ImportPreviewResult, ImportStrategy } from '@web/types
 interface ImportModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  slug: string
 }
 
 type ModalState = 'idle' | 'previewing' | 'importing' | 'done' | 'error'
 
-export function ImportModal({ open, onOpenChange }: ImportModalProps) {
+export function ImportModal({ open, onOpenChange, slug }: ImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [modalState, setModalState] = useState<ModalState>('idle')
   const [errorMessage, setErrorMessage] = useState<string>('')
@@ -34,8 +35,8 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
   const [strategy, setStrategy] = useState<ImportStrategy>('skip')
   const [importResult, setImportResult] = useState<{ created: number; updated: number; skipped: number } | null>(null)
 
-  const previewMutation = useImportPreview()
-  const executeMutation = useImportExecute()
+  const previewMutation = useImportPreview(slug)
+  const executeMutation = useImportExecute(slug)
 
   function resetState() {
     setModalState('idle')
@@ -151,8 +152,20 @@ export function ImportModal({ open, onOpenChange }: ImportModalProps) {
           </div>
         )}
 
-        {(modalState === 'previewing' || modalState === 'importing') && preview && (
+        {(modalState === 'previewing' || modalState === 'importing') && preview && parsedFile && (
           <div className="space-y-4">
+            {parsedFile.workspace ? (
+              <div className="rounded-md bg-muted px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Origem: </span>
+                <span className="font-medium">{parsedFile.workspace.name}</span>
+                <span className="text-muted-foreground font-mono ml-2">({parsedFile.workspace.slug})</span>
+              </div>
+            ) : (
+              <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                Arquivo legado (sem informação de workspace de origem)
+              </div>
+            )}
+
             <div className="flex gap-4 text-sm">
               <span className="rounded-full bg-green-100 px-3 py-1 text-green-800 font-medium">
                 {preview.summary.new} novo{preview.summary.new !== 1 ? 's' : ''}

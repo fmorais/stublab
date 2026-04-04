@@ -15,7 +15,7 @@ export async function toggleEndpointRoute(app: FastifyInstance) {
     const { id } = params.data
 
     try {
-      const result = await EndpointService.toggle(id)
+      const result = await EndpointService.toggle(id, request.workspace.id)
       return reply.status(200).send(result)
     } catch (err) {
       if (err instanceof EndpointServiceError) {

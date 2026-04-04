@@ -21,14 +21,14 @@ beforeEach(() => {
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
 
-describe('POST /api/endpoints', () => {
+describe('POST /api/workspaces/:slug/endpoints', () => {
   it('cria endpoint com dados válidos e retorna 201', async () => {
     const app = await buildApp()
     await app.ready()
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Listar usuários',
         method: 'GET',
@@ -60,7 +60,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Criar usuário',
         method: 'POST',
@@ -87,7 +87,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Teste',
         method: 'INVALIDO',
@@ -108,7 +108,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Teste',
         method: 'GET',
@@ -129,7 +129,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Teste',
         method: 'GET',
@@ -150,7 +150,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: '',
         method: 'GET',
@@ -171,7 +171,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Teste',
         method: 'GET',
@@ -193,13 +193,13 @@ describe('POST /api/endpoints', () => {
 
     await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Primeiro', method: 'GET', path: '/conflict', responseStatus: 200 },
     })
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Segundo', method: 'GET', path: '/conflict', responseStatus: 200 },
     })
 
@@ -215,7 +215,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {},
     })
 
@@ -231,7 +231,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Teste',
         method: 'GET',
@@ -252,7 +252,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Com regra',
         method: 'GET',
@@ -281,7 +281,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Regra inválida',
         method: 'GET',
@@ -303,7 +303,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Sem regras',
         method: 'GET',
@@ -325,7 +325,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Sem campo',
         method: 'GET',
@@ -352,7 +352,7 @@ describe('POST /api/endpoints', () => {
 
     const res = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: {
         name: 'Muitas regras',
         method: 'GET',

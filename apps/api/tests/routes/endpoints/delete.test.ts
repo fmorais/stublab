@@ -21,24 +21,24 @@ beforeEach(() => {
   migrate(testDb, { migrationsFolder: './drizzle' })
 })
 
-describe('DELETE /api/endpoints/:id', () => {
+describe('DELETE /api/workspaces/:slug/endpoints/:id', () => {
   it('deleta endpoint existente e retorna 204', async () => {
     const app = await buildApp()
     await app.ready()
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Para deletar', method: 'GET', path: '/to-delete', responseStatus: 200 },
     })
     const { id } = created.json()
 
-    const res = await app.inject({ method: 'DELETE', url: `/api/endpoints/${id}` })
+    const res = await app.inject({ method: 'DELETE', url: `/api/workspaces/default/endpoints/${id}` })
 
     expect(res.statusCode).toBe(204)
     expect(res.body).toBe('')
 
-    const getRes = await app.inject({ method: 'GET', url: `/api/endpoints/${id}` })
+    const getRes = await app.inject({ method: 'GET', url: `/api/workspaces/default/endpoints/${id}` })
     expect(getRes.statusCode).toBe(404)
 
     await app.close()
@@ -50,7 +50,7 @@ describe('DELETE /api/endpoints/:id', () => {
 
     const res = await app.inject({
       method: 'DELETE',
-      url: '/api/endpoints/00000000-0000-0000-0000-000000000000',
+      url: '/api/workspaces/default/endpoints/00000000-0000-0000-0000-000000000000',
     })
 
     expect(res.statusCode).toBe(404)
@@ -65,14 +65,14 @@ describe('DELETE /api/endpoints/:id', () => {
 
     const created = await app.inject({
       method: 'POST',
-      url: '/api/endpoints',
+      url: '/api/workspaces/default/endpoints',
       payload: { name: 'Inativo', method: 'DELETE', path: '/inactive-delete', responseStatus: 200 },
     })
     const { id } = created.json()
 
-    await app.inject({ method: 'PATCH', url: `/api/endpoints/${id}/toggle` })
+    await app.inject({ method: 'PATCH', url: `/api/workspaces/default/endpoints/${id}/toggle` })
 
-    const res = await app.inject({ method: 'DELETE', url: `/api/endpoints/${id}` })
+    const res = await app.inject({ method: 'DELETE', url: `/api/workspaces/default/endpoints/${id}` })
 
     expect(res.statusCode).toBe(204)
     expect(res.body).toBe('')

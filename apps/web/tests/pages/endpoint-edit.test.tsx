@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { EndpointEdit } from '@web/pages/endpoint-edit'
 import type { Endpoint } from '@web/types/endpoint'
 
-vi.mock('@web/hooks/use-endpoint', () => ({
+vi.mock('@web/hooks/use-endpoints', () => ({
+  useEndpoints: vi.fn(),
   useEndpoint: vi.fn(),
 }))
 
@@ -17,17 +19,21 @@ vi.mock('@web/hooks/use-delete-endpoint', () => ({
   useDeleteEndpoint: vi.fn(),
 }))
 
+vi.mock('@web/hooks/use-workspaces', () => ({
+  useWorkspace: vi.fn(() => ({ data: { id: 'ws-1', name: 'Default', slug: 'default' } })),
+}))
+
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: vi.fn(() => mockNavigate),
-    useParams: vi.fn().mockReturnValue({ id: 'test-id-123' }),
+    useParams: vi.fn().mockReturnValue({ slug: 'default', id: 'test-id-123' }),
   }
 })
 
-import { useEndpoint } from '@web/hooks/use-endpoint'
+import { useEndpoint } from '@web/hooks/use-endpoints'
 import { useUpdateEndpoint } from '@web/hooks/use-update-endpoint'
 import { useDeleteEndpoint } from '@web/hooks/use-delete-endpoint'
 
@@ -51,10 +57,13 @@ const mockEndpoint: Endpoint = {
 }
 
 function renderPage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <EndpointEdit />
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <EndpointEdit />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -186,7 +195,7 @@ describe('EndpointEdit', () => {
     expect(screen.getByText(/erro ao atualizar endpoint/i)).toBeInTheDocument()
   })
 
-  it('botão Voltar navega para "/" na tela de erro', async () => {
+  it('botão Voltar navega para a lista do workspace na tela de erro', async () => {
     const user = userEvent.setup()
 
     mockUseEndpoint.mockReturnValue({
@@ -199,6 +208,6 @@ describe('EndpointEdit', () => {
 
     await user.click(screen.getByRole('button', { name: /voltar/i }))
 
-    expect(mockNavigate).toHaveBeenCalledWith('/')
+    expect(mockNavigate).toHaveBeenCalledWith('/workspaces/default/endpoints')
   })
 })

@@ -16,7 +16,7 @@ export async function listEndpointsRoute(app: FastifyInstance) {
     }
 
     try {
-      const result = await EndpointService.findAll(query.data)
+      const result = await EndpointService.findAll(request.workspace.id, query.data)
       return reply.status(200).send(result)
     } catch (err) {
       request.log.error(err)
