@@ -8,6 +8,37 @@ A self-hosted mock server with a web UI. Create and manage HTTP stubs without to
 
 ---
 
+## Screenshots
+
+### Workspace selector
+Organize stubs into isolated workspaces, each with its own URL namespace. See at a glance how many endpoints each workspace has and which ones are active.
+
+![Workspace selector](docs/screenshots/01-workspaces.png)
+
+### Endpoint list
+All your stubs in one table — method badge, path, response status, and quick toggle to activate/deactivate without deleting.
+
+![Endpoint list](docs/screenshots/02-endpoints-list.png)
+
+### Create / edit an endpoint
+Configure method, path, HTTP status, JSON body (with syntax highlighting and formatter), delay, and custom response headers.
+
+![Edit endpoint](docs/screenshots/03-endpoint-edit.png)
+
+### Matching rules (conditional responses)
+Attach rules to make an endpoint respond only when specific conditions are met — inspect query params, headers, or JSON body fields with operators like `eq`, `contains`, `exists`.
+
+![Matching rules](docs/screenshots/04-matching-rules.png)
+
+### Proxy mode
+Set a real upstream URL per workspace. Requests with no matching stub are forwarded transparently. The **Proxy ativo** badge is shown in the workspace header when proxy is active.
+
+| Proxy badge | Proxy configuration |
+|-------------|---------------------|
+| ![Proxy badge](docs/screenshots/06-proxy-badge.png) | ![Proxy dialog](docs/screenshots/07-proxy-config-dialog.png) |
+
+---
+
 ## Quick Start with Docker
 
 ```bash
@@ -64,6 +95,15 @@ No YAML files. No restarts. Changes take effect immediately.
 - Multiple active stubs can share the same method + path — the one with the most satisfied rules wins
 - Fallback: an endpoint with no rules always matches as a catch-all
 
+### Proxy mode
+- Define a **proxy URL** per workspace — requests with no matching stub are forwarded transparently to the real service
+- Toggle proxy on/off without losing the configured URL
+- Mock always wins: a matching stub responds before the proxy is consulted
+- Configurable timeout (`PROXY_TIMEOUT_MS`, default 10 s) with structured 504/502 error bodies
+- `X-Stublab-Proxied: true` header on every proxied response (including errors)
+- Global kill switch: `PROXY_ENABLED=false` disables proxy across all workspaces (useful for offline CI)
+- "Proxy ativo" badge visible in the workspace header when proxy is active
+
 ### Import / Export
 - Export all or selected endpoints as a JSON file
 - Import endpoints from a previously exported file
@@ -81,7 +121,7 @@ No YAML files. No restarts. Changes take effect immediately.
 - Path params supported (`/api/users/:id`)
 - `delay` field to simulate slow APIs
 - Custom response headers per endpoint
-- 303 tests across API and UI
+- 319 tests across API and UI
 
 ---
 
@@ -219,8 +259,14 @@ All admin endpoints are under `/api`. The mock server listens on `/mock/:slug/*`
 | GET    | `/api/workspaces`           | List all workspaces      |
 | POST   | `/api/workspaces`           | Create workspace         |
 | GET    | `/api/workspaces/:slug`     | Get workspace with stats |
-| PUT    | `/api/workspaces/:slug`     | Update workspace         |
+| PUT    | `/api/workspaces/:slug`     | Update workspace (name, slug, proxyUrl, proxyEnabled) |
 | DELETE | `/api/workspaces/:slug`     | Delete workspace         |
+
+### Proxy config
+
+| Method | Path                  | Description                          |
+|--------|-----------------------|--------------------------------------|
+| GET    | `/api/config/proxy`   | Global proxy config (env-based)      |
 
 ### Endpoints CRUD
 
@@ -290,9 +336,11 @@ stublab/
 │   │   └── src/
 │   │       ├── routes/
 │   │       │   ├── workspaces/   # Workspace CRUD
-│   │       │   └── endpoints/    # Endpoint CRUD + import/export
-│   │       ├── mock/         # Mock engine + rule evaluator
-│   │       ├── services/     # Business logic
+│   │       │   ├── endpoints/    # Endpoint CRUD + import/export
+│   │       │   └── config/       # Global config (proxy)
+│   │       ├── mock/         # Mock engine + rule evaluator + proxy handler
+│   │       ├── services/     # Business logic (proxy-service, workspace-service, …)
+│   │       ├── config/       # Environment variable parsing
 │   │       ├── db/           # Drizzle schema + migrations
 │   │       └── schemas/      # Zod validation schemas
 │   └── web/                  # React frontend
@@ -335,11 +383,13 @@ pnpm db:studio      # open Drizzle Studio (visual DB browser)
 
 ### Environment variables
 
-| Variable      | Default                    | Description                  |
-|---------------|----------------------------|------------------------------|
-| `PORT`        | `3000`                     | API server port              |
-| `CORS_ORIGIN` | `http://localhost:5173`    | Allowed origin for CORS      |
-| `DATABASE_URL`| `./stublab.db`             | SQLite path or Postgres URL  |
+| Variable           | Default                    | Description                               |
+|--------------------|----------------------------|-------------------------------------------|
+| `PORT`             | `3000`                     | API server port                           |
+| `CORS_ORIGIN`      | `http://localhost:5173`    | Allowed origin for CORS                   |
+| `DATABASE_URL`     | `./stublab.db`             | SQLite path or Postgres URL               |
+| `PROXY_ENABLED`    | `true`                     | Global kill switch for proxy mode         |
+| `PROXY_TIMEOUT_MS` | `10000`                    | Timeout (ms) for calls to the real service|
 
 Copy `.env.example` and adjust as needed:
 

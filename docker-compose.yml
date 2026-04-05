@@ -10,6 +10,8 @@ services:
       PORT: "3000"
       DATABASE_URL: "/app/data/stublab.db"
       LOG_LEVEL: "${LOG_LEVEL:-info}"
+      PROXY_ENABLED: "${PROXY_ENABLED:-true}"
+      PROXY_TIMEOUT_MS: "${PROXY_TIMEOUT_MS:-10000}"
     volumes:
       - stublab_data:/app/data
     healthcheck:

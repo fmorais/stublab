@@ -20,6 +20,7 @@ import { importPreviewRoute } from './routes/endpoints/import-preview.js'
 import { importEndpointsRoute } from './routes/endpoints/import.js'
 import { mockHandler } from './mock/handler.js'
 import { WorkspaceService } from './services/workspace-service.js'
+import { proxyConfigRoute } from './routes/config/proxy.js'
 // workspace type augmentation — importar o arquivo que declara a extensão
 import './routes/endpoints/workspace-hook.js'
 
@@ -93,6 +94,10 @@ export async function buildApp() {
     await wsApi.register(importPreviewRoute)
     await wsApi.register(importEndpointsRoute)
   }, { prefix: '/api/workspaces/:slug' })
+
+  await app.register(async (configApi) => {
+    await configApi.register(proxyConfigRoute)
+  }, { prefix: '/api/config' })
 
   await app.register(mockHandler)
 
