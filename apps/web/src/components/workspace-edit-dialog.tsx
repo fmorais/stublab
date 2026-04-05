@@ -94,7 +94,7 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
           name: name.trim(),
           slug,
           proxyEnabled,
-          proxyUrl: proxyEnabled && proxyUrl.trim() ? proxyUrl.trim() : null,
+          proxyUrl: proxyUrl.trim() || null,
         },
       })
       handleClose(false)
@@ -170,7 +170,7 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
               </Label>
             </div>
 
-            {proxyEnabled && (
+            {(proxyEnabled || proxyGloballyDisabled) && (
               <div className="space-y-1.5">
                 <Label htmlFor="proxy-url">URL base do serviço</Label>
                 <Input

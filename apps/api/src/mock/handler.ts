@@ -36,14 +36,20 @@ async function forwardToProxy(
   proxyUrl: string,
 ): Promise<void> {
   try {
-    const queryString = Object.keys(request.query as object).length > 0
-      ? '?' + new URLSearchParams(request.query as Record<string, string>).toString()
-      : ''
+    const queryString = new URL(
+      request.url,
+      `${request.protocol}://${request.hostname}`,
+    ).search
+    let proxyBody: Readable | null = null
+    if (request.body != null) {
+      const bodyStr = typeof request.body === 'string' ? request.body : JSON.stringify(request.body)
+      proxyBody = Readable.from([Buffer.from(bodyStr)])
+    }
     const result = await ProxyService.forward({
       method: request.method,
       path: wildcardPath + queryString,
-      headers: request.headers as Record<string, string>,
-      body: request.raw as unknown as Readable,
+      headers: request.headers,
+      body: proxyBody,
       targetBaseUrl: proxyUrl,
       clientIp: request.ip,
       originalHost: request.hostname,

@@ -8,6 +8,37 @@ A self-hosted mock server with a web UI. Create and manage HTTP stubs without to
 
 ---
 
+## Screenshots
+
+### Workspace selector
+Organize stubs into isolated workspaces, each with its own URL namespace. See at a glance how many endpoints each workspace has and which ones are active.
+
+![Workspace selector](docs/screenshots/01-workspaces.png)
+
+### Endpoint list
+All your stubs in one table — method badge, path, response status, and quick toggle to activate/deactivate without deleting.
+
+![Endpoint list](docs/screenshots/02-endpoints-list.png)
+
+### Create / edit an endpoint
+Configure method, path, HTTP status, JSON body (with syntax highlighting and formatter), delay, and custom response headers.
+
+![Edit endpoint](docs/screenshots/03-endpoint-edit.png)
+
+### Matching rules (conditional responses)
+Attach rules to make an endpoint respond only when specific conditions are met — inspect query params, headers, or JSON body fields with operators like `eq`, `contains`, `exists`.
+
+![Matching rules](docs/screenshots/04-matching-rules.png)
+
+### Proxy mode
+Set a real upstream URL per workspace. Requests with no matching stub are forwarded transparently. The **Proxy ativo** badge is shown in the workspace header when proxy is active.
+
+| Proxy badge | Proxy configuration |
+|-------------|---------------------|
+| ![Proxy badge](docs/screenshots/06-proxy-badge.png) | ![Proxy dialog](docs/screenshots/07-proxy-config-dialog.png) |
+
+---
+
 ## Quick Start with Docker
 
 ```bash

@@ -13,6 +13,15 @@ const updateWorkspaceSchema = z.object({
   ).refine(
     (url) => { const p = new URL(url); return p.pathname === '/' || p.pathname === '' },
     'URL não deve conter path',
+  ).refine(
+    (url) => { const p = new URL(url); return p.search === '' },
+    'URL não deve conter query string',
+  ).refine(
+    (url) => { const p = new URL(url); return p.hash === '' },
+    'URL não deve conter hash',
+  ).refine(
+    (url) => { const p = new URL(url); return p.username === '' && p.password === '' },
+    'URL não deve conter credenciais',
   ).transform((url) => url.replace(/\/$/, '')).nullable().optional(),
   proxyEnabled: z.boolean().optional(),
 })
