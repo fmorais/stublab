@@ -62,8 +62,8 @@ export function filterResponseHeaders(
 
 export function truncateBody(body: string | null): string | null {
   if (!body) return body
-  if (body.length <= MAX_BODY_SIZE) return body
-  return body.slice(0, MAX_BODY_SIZE) + '\n[truncated]'
+  if (Buffer.byteLength(body, 'utf8') <= MAX_BODY_SIZE) return body
+  return Buffer.from(body, 'utf8').subarray(0, MAX_BODY_SIZE).toString('utf8') + '\n[truncated]'
 }
 
 function rowToRecording(row: typeof recordedInteractions.$inferSelect): RecordedInteraction {

@@ -43,9 +43,10 @@ async function forwardToProxy(
       `${request.protocol}://${request.hostname}`,
     ).search
     let proxyBody: Readable | null = null
+    let requestBodyStr: string | null = null
     if (request.body != null) {
-      const bodyStr = typeof request.body === 'string' ? request.body : JSON.stringify(request.body)
-      proxyBody = Readable.from([Buffer.from(bodyStr)])
+      requestBodyStr = typeof request.body === 'string' ? request.body : JSON.stringify(request.body)
+      proxyBody = Readable.from([Buffer.from(requestBodyStr)])
     }
     const result = await ProxyService.forward({
       method: request.method,
@@ -58,10 +59,6 @@ async function forwardToProxy(
       originalProto: request.protocol,
       timeoutMs: getProxyTimeoutMs(),
     })
-    reply.header('x-stublab-proxied', 'true')
-    for (const [key, value] of Object.entries(result.headers)) {
-      reply.header(key, value)
-    }
 
     if (workspace.recordEnabled) {
       const chunks: Buffer[] = []
@@ -71,19 +68,29 @@ async function forwardToProxy(
       const bodyBuffer = Buffer.concat(chunks)
       const bodyString = bodyBuffer.toString('utf-8')
 
+      reply.header('x-stublab-proxied', 'true')
+      const safeHeaders = filterResponseHeaders(result.headers)
+      for (const [key, value] of Object.entries(safeHeaders)) {
+        reply.header(key, value)
+      }
+
       RecordingService.record({
         workspaceId: workspace.id,
         method: request.method,
         path: wildcardPath + queryString,
         requestHeaders: request.headers as Record<string, string>,
-        requestBody: null,
+        requestBody: requestBodyStr,
         responseStatus: result.status,
         responseBody: bodyString,
-        responseHeaders: filterResponseHeaders(result.headers),
+        responseHeaders: safeHeaders,
       }).catch((err: unknown) => request.log.error({ err }, 'Falha ao gravar interação'))
 
       reply.status(result.status).send(bodyBuffer)
     } else {
+      reply.header('x-stublab-proxied', 'true')
+      for (const [key, value] of Object.entries(result.headers)) {
+        reply.header(key, value)
+      }
       reply.status(result.status).send(result.body)
     }
   } catch (err) {

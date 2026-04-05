@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@web/lib/api-client'
-import type { RecordedInteraction, RecordingsListResponse, SaveRecordingInput, SaveBulkResponse } from '@web/types/recording'
+import type { RecordedInteraction, RecordingsListResponse, SaveRecordingInput, SaveBulkResponse, SaveRecordingResponse } from '@web/types/recording'
 
 interface RecordingsFilters {
   method?: string
@@ -71,9 +71,9 @@ export function useDeleteAllRecordings(slug: string) {
 
 export function useSaveRecording(slug: string) {
   const queryClient = useQueryClient()
-  return useMutation<RecordedInteraction, Error & { status?: number }, { id: string; data: SaveRecordingInput }>({
+  return useMutation<SaveRecordingResponse, Error & { status?: number }, { id: string; data: SaveRecordingInput }>({
     mutationFn: ({ id, data }) =>
-      apiClient.post<RecordedInteraction>(`/workspaces/${slug}/recordings/${id}/save`, data),
+      apiClient.post<SaveRecordingResponse>(`/workspaces/${slug}/recordings/${id}/save`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recordings', slug] })
       queryClient.invalidateQueries({ queryKey: ['workspaces', slug, 'endpoints'] })
@@ -83,7 +83,7 @@ export function useSaveRecording(slug: string) {
 
 export function useSaveRecordingsBulk(slug: string) {
   const queryClient = useQueryClient()
-  return useMutation<SaveBulkResponse, Error, { ids: string[]; overwrite?: boolean }>({
+  return useMutation<SaveBulkResponse, Error, { ids: string[]; skipConflicts?: boolean }>({
     mutationFn: (body) =>
       apiClient.post<SaveBulkResponse>(`/workspaces/${slug}/recordings/save-bulk`, body),
     onSuccess: () => {

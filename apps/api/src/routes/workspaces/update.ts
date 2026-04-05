@@ -38,7 +38,10 @@ export async function updateWorkspaceRoute(app: FastifyInstance) {
 
     if (body.data.recordEnabled === true) {
       const existing = await WorkspaceService.findBySlug(slug)
-      const proxyWillBeEnabled = body.data.proxyEnabled ?? existing?.proxyEnabled
+      if (!existing) {
+        return reply.status(404).send({ error: 'Workspace não encontrado', code: 'NOT_FOUND' })
+      }
+      const proxyWillBeEnabled = body.data.proxyEnabled ?? existing.proxyEnabled
       if (!proxyWillBeEnabled) {
         return reply.status(400).send({
           error: 'Record mode requer proxy mode ativo',

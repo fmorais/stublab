@@ -1,3 +1,5 @@
+import type { Endpoint } from '@web/types/endpoint'
+
 export interface RecordedInteraction {
   id: string
   workspaceId: string
@@ -31,4 +33,9 @@ export interface SaveBulkResponse {
   skipped: number
   deleted: number
   errors: string[]
+}
+
+export interface SaveRecordingResponse {
+  endpoint: Endpoint
+  recordingDeleted: boolean
 }
