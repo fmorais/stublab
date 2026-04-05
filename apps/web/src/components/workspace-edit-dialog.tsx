@@ -30,6 +30,7 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
   const [slug, setSlug] = useState(workspace.slug)
   const [proxyEnabled, setProxyEnabled] = useState(workspace.proxyEnabled ?? false)
   const [proxyUrl, setProxyUrl] = useState(workspace.proxyUrl ?? '')
+  const [recordEnabled, setRecordEnabled] = useState(workspace.recordEnabled ?? false)
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({})
   const [proxyUrlError, setProxyUrlError] = useState<string | undefined>(undefined)
   const mutation = useUpdateWorkspace()
@@ -43,6 +44,7 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
       setSlug(workspace.slug)
       setProxyEnabled(workspace.proxyEnabled ?? false)
       setProxyUrl(workspace.proxyUrl ?? '')
+      setRecordEnabled(workspace.recordEnabled ?? false)
       setErrors({})
       setProxyUrlError(undefined)
       mutation.reset()
@@ -55,6 +57,7 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
       setSlug(workspace.slug)
       setProxyEnabled(workspace.proxyEnabled ?? false)
       setProxyUrl(workspace.proxyUrl ?? '')
+      setRecordEnabled(workspace.recordEnabled ?? false)
       setErrors({})
       setProxyUrlError(undefined)
       mutation.reset()
@@ -95,6 +98,7 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
           slug,
           proxyEnabled,
           proxyUrl: proxyUrl.trim() || null,
+          recordEnabled,
         },
       })
       handleClose(false)
@@ -103,6 +107,9 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
       const code = (err as { code?: string })?.code
       if (code === 'SLUG_CONFLICT') {
         setErrors({ slug: 'Esse slug já está em uso' })
+      } else if (code === 'VALIDATION_ERROR') {
+        // recordEnabled sem proxy ativo — nenhuma ação extra necessária; a mensagem
+        // de erro geral do mutation.isError abaixo já será exibida
       }
     }
   }
@@ -186,6 +193,28 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
                   Requests sem endpoint mockado serão encaminhadas para esta URL
                 </p>
               </div>
+            )}
+          </div>
+
+          <div className="space-y-3 border-t pt-4 mt-2">
+            <h4 className="text-sm font-medium">Record Mode</h4>
+
+            <div className="flex items-center gap-2">
+              <Switch
+                id="record-enabled"
+                checked={recordEnabled}
+                onCheckedChange={setRecordEnabled}
+                disabled={!proxyEnabled || proxyGloballyDisabled}
+              />
+              <Label htmlFor="record-enabled" className="text-sm">
+                Gravar interações proxiadas para revisão
+              </Label>
+            </div>
+
+            {(!proxyEnabled || proxyGloballyDisabled) && (
+              <p className="text-xs text-muted-foreground">
+                Ative o proxy mode primeiro para habilitar gravação
+              </p>
             )}
           </div>
 

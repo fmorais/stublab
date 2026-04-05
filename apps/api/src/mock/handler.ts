@@ -5,6 +5,7 @@ import { endpoints, matchingRules } from '../db/schema.js'
 import { WorkspaceService } from '../services/workspace-service.js'
 import { matchEndpoint } from './engine.js'
 import { ProxyService, ProxyServiceError } from '../services/proxy-service.js'
+import { RecordingService, filterResponseHeaders } from '../services/recording-service.js'
 import { isProxyGloballyEnabled, getProxyTimeoutMs } from '../config/env.js'
 import type { Endpoint, HttpMethod, MatchingRule, RuleSource, RuleOperator } from '../types/endpoint.js'
 import { Readable } from 'stream'
@@ -34,6 +35,7 @@ async function forwardToProxy(
   reply: FastifyReply,
   wildcardPath: string,
   proxyUrl: string,
+  workspace: { id: string; recordEnabled: boolean },
 ): Promise<void> {
   try {
     const queryString = new URL(
@@ -60,7 +62,30 @@ async function forwardToProxy(
     for (const [key, value] of Object.entries(result.headers)) {
       reply.header(key, value)
     }
-    reply.status(result.status).send(result.body)
+
+    if (workspace.recordEnabled) {
+      const chunks: Buffer[] = []
+      for await (const chunk of result.body) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string))
+      }
+      const bodyBuffer = Buffer.concat(chunks)
+      const bodyString = bodyBuffer.toString('utf-8')
+
+      RecordingService.record({
+        workspaceId: workspace.id,
+        method: request.method,
+        path: wildcardPath + queryString,
+        requestHeaders: request.headers as Record<string, string>,
+        requestBody: null,
+        responseStatus: result.status,
+        responseBody: bodyString,
+        responseHeaders: filterResponseHeaders(result.headers),
+      }).catch((err: unknown) => request.log.error({ err }, 'Falha ao gravar interação'))
+
+      reply.status(result.status).send(bodyBuffer)
+    } else {
+      reply.status(result.status).send(result.body)
+    }
   } catch (err) {
     reply.header('x-stublab-proxied', 'true')
     if (err instanceof ProxyServiceError) {
@@ -134,7 +159,7 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
 
         if (rows.length === 0) {
           if (isProxyGloballyEnabled() && workspace.proxyEnabled && workspace.proxyUrl) {
-            return forwardToProxy(request, reply, wildcardPath, workspace.proxyUrl)
+            return forwardToProxy(request, reply, wildcardPath, workspace.proxyUrl, workspace)
           }
           return reply
             .status(404)
@@ -172,7 +197,7 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
 
         if (!matched) {
           if (isProxyGloballyEnabled() && workspace.proxyEnabled && workspace.proxyUrl) {
-            return forwardToProxy(request, reply, wildcardPath, workspace.proxyUrl)
+            return forwardToProxy(request, reply, wildcardPath, workspace.proxyUrl, workspace)
           }
           return reply
             .status(404)

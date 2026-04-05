@@ -68,7 +68,7 @@ export function EndpointsList() {
 
   return (
     <div className="space-y-4">
-      <WorkspaceSelector workspaceName={workspace?.name ?? slug} proxyEnabled={workspace?.proxyEnabled} proxyUrl={workspace?.proxyUrl} />
+      <WorkspaceSelector workspaceName={workspace?.name ?? slug} proxyEnabled={workspace?.proxyEnabled} proxyUrl={workspace?.proxyUrl} recordEnabled={workspace?.recordEnabled} />
 
       <div className="flex items-center justify-between">
         <div>
@@ -78,6 +78,15 @@ export function EndpointsList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {workspace?.recordEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/workspaces/${slug}/recordings`)}
+            >
+              Ver gravações
+            </Button>
+          )}
           {workspace && workspace.slug !== 'default' && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>

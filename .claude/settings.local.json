@@ -30,7 +30,9 @@
       "Bash(ls C:/Users/Fernando/Projects/stublab/apps/api/.env*)",
       "Bash(ls C:/Users/Fernando/Projects/stublab/.env*)",
       "Bash(npx tsx:*)",
-      "Bash(sleep 2 kill %1 echo \"exit: $?\")"
+      "Bash(sleep 2 kill %1 echo \"exit: $?\")",
+      "Bash(grep -l \"default\" \"C:\\\\Users\\\\Fernando\\\\Projects\\\\stublab\\\\apps\\\\api\\\\drizzle\"/*.sql)",
+      "Bash(grep -i \"insert\\\\|default workspace\" \"C:\\\\Users\\\\Fernando\\\\Projects\\\\stublab\\\\apps\\\\api\\\\drizzle\"/*.sql)"
     ]
   }
 }

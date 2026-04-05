@@ -22,6 +22,7 @@ const baseWorkspace: WorkspaceWithStats = {
   slug: 'meu-workspace',
   proxyEnabled: false,
   proxyUrl: null,
+  recordEnabled: false,
   endpointCount: 0,
   activeEndpointCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -62,7 +63,7 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
     renderDialog()
 
     expect(screen.getByText('Proxy Mode')).toBeInTheDocument()
-    expect(screen.getByRole('switch')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Encaminhar requests sem mock/i)).toBeInTheDocument()
     expect(screen.getByText(/Encaminhar requests sem mock/i)).toBeInTheDocument()
   })
 
@@ -70,7 +71,7 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
     const user = userEvent.setup()
     renderDialog()
 
-    const toggle = screen.getByRole('switch')
+    const toggle = screen.getByLabelText(/Encaminhar requests sem mock/i)
     expect(toggle).not.toBeChecked()
 
     await user.click(toggle)
@@ -84,7 +85,7 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
 
     expect(screen.queryByPlaceholderText(/https:\/\/api/i)).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('switch'))
+    await user.click(screen.getByLabelText(/Encaminhar requests sem mock/i))
 
     expect(screen.getByPlaceholderText(/https:\/\/api/i)).toBeInTheDocument()
   })
@@ -93,7 +94,7 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
     const user = userEvent.setup()
     renderDialog()
 
-    const toggle = screen.getByRole('switch')
+    const toggle = screen.getByLabelText(/Encaminhar requests sem mock/i)
 
     await user.click(toggle)
     expect(screen.getByPlaceholderText(/https:\/\/api/i)).toBeInTheDocument()
@@ -106,7 +107,7 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
     const user = userEvent.setup()
     renderDialog()
 
-    await user.click(screen.getByRole('switch'))
+    await user.click(screen.getByLabelText(/Encaminhar requests sem mock/i))
     await user.click(screen.getByRole('button', { name: /salvar/i }))
 
     await waitFor(() => {
@@ -131,13 +132,13 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
 
     renderDialog()
 
-    expect(screen.getByRole('switch')).toBeDisabled()
+    expect(screen.getByLabelText(/Encaminhar requests sem mock/i)).toBeDisabled()
   })
 
   it('popula o switch com o valor atual do workspace ao abrir', () => {
     renderDialog({ proxyEnabled: true, proxyUrl: 'https://api.example.com' })
 
-    expect(screen.getByRole('switch')).toBeChecked()
+    expect(screen.getByLabelText(/Encaminhar requests sem mock/i)).toBeChecked()
     expect(screen.getByDisplayValue('https://api.example.com')).toBeInTheDocument()
   })
 
@@ -153,7 +154,7 @@ describe('WorkspaceEditDialog — seção de proxy', () => {
     const user = userEvent.setup()
     renderDialog()
 
-    await user.click(screen.getByRole('switch'))
+    await user.click(screen.getByLabelText(/Encaminhar requests sem mock/i))
     await user.type(screen.getByPlaceholderText(/https:\/\/api/i), 'https://api.example.com')
     await user.click(screen.getByRole('button', { name: /salvar/i }))
 

@@ -21,6 +21,7 @@ function rowToWorkspace(row: typeof workspaces.$inferSelect): Workspace {
     slug: row.slug,
     proxyUrl: row.proxyUrl ?? null,
     proxyEnabled: row.proxyEnabled,
+    recordEnabled: row.recordEnabled,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -95,6 +96,7 @@ export const WorkspaceService = {
         ...(input.slug !== undefined && { slug: input.slug }),
         ...(input.proxyUrl !== undefined && { proxyUrl: input.proxyUrl }),
         ...(input.proxyEnabled !== undefined && { proxyEnabled: input.proxyEnabled }),
+        ...(input.recordEnabled !== undefined && { recordEnabled: input.recordEnabled }),
         updatedAt: now,
       })
       .where(eq(workspaces.id, existing.id))

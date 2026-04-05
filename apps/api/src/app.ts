@@ -18,6 +18,13 @@ import { deleteEndpointRoute } from './routes/endpoints/delete.js'
 import { exportEndpointsRoute } from './routes/endpoints/export.js'
 import { importPreviewRoute } from './routes/endpoints/import-preview.js'
 import { importEndpointsRoute } from './routes/endpoints/import.js'
+import { listRecordingsRoute } from './routes/recordings/list.js'
+import { getRecordingRoute } from './routes/recordings/get.js'
+import { deleteRecordingRoute } from './routes/recordings/delete.js'
+import { discardRecordingsRoute } from './routes/recordings/discard.js'
+import { deleteAllRecordingsRoute } from './routes/recordings/delete-all.js'
+import { saveRecordingRoute } from './routes/recordings/save.js'
+import { saveBulkRecordingsRoute } from './routes/recordings/save-bulk.js'
 import { mockHandler } from './mock/handler.js'
 import { WorkspaceService } from './services/workspace-service.js'
 import { proxyConfigRoute } from './routes/config/proxy.js'
@@ -93,6 +100,13 @@ export async function buildApp() {
     await wsApi.register(exportEndpointsRoute)
     await wsApi.register(importPreviewRoute)
     await wsApi.register(importEndpointsRoute)
+    await wsApi.register(listRecordingsRoute)
+    await wsApi.register(getRecordingRoute)
+    await wsApi.register(deleteRecordingRoute)
+    await wsApi.register(discardRecordingsRoute)
+    await wsApi.register(deleteAllRecordingsRoute)
+    await wsApi.register(saveRecordingRoute)
+    await wsApi.register(saveBulkRecordingsRoute)
   }, { prefix: '/api/workspaces/:slug' })
 
   await app.register(async (configApi) => {

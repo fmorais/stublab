@@ -3,6 +3,7 @@ import { WorkspaceList } from '@web/pages/workspace-list'
 import { EndpointsList } from '@web/pages/endpoints-list'
 import { EndpointCreate } from '@web/pages/endpoint-create'
 import { EndpointEdit } from '@web/pages/endpoint-edit'
+import { RecordingsList } from '@web/pages/recordings-list'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/workspaces/:slug/endpoints" element={<EndpointsList />} />
           <Route path="/workspaces/:slug/endpoints/new" element={<EndpointCreate />} />
           <Route path="/workspaces/:slug/endpoints/:id/edit" element={<EndpointEdit />} />
+          <Route path="/workspaces/:slug/recordings" element={<RecordingsList />} />
         </Routes>
       </main>
     </div>

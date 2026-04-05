@@ -52,4 +52,28 @@ describe('WorkspaceSelector', () => {
 
     expect(screen.queryByText('Proxy ativo')).not.toBeInTheDocument()
   })
+
+  it('badge "Gravando" aparece quando recordEnabled=true', () => {
+    renderSelector({
+      workspaceName: 'Meu Workspace',
+      recordEnabled: true,
+    })
+
+    expect(screen.getByText('Gravando')).toBeInTheDocument()
+  })
+
+  it('badge "Gravando" não aparece quando recordEnabled=false', () => {
+    renderSelector({
+      workspaceName: 'Meu Workspace',
+      recordEnabled: false,
+    })
+
+    expect(screen.queryByText('Gravando')).not.toBeInTheDocument()
+  })
+
+  it('badge "Gravando" não aparece quando recordEnabled não é passado', () => {
+    renderSelector({ workspaceName: 'Meu Workspace' })
+
+    expect(screen.queryByText('Gravando')).not.toBeInTheDocument()
+  })
 })
