@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "Simple Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List users",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://api.example.com/users",
+          "path": ["users"]
+        }
+      }
+    },
+    {
+      "name": "Create user",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "https://api.example.com/users",
+          "path": ["users"]
+        }
+      }
+    },
+    {
+      "name": "Get user",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://api.example.com/users/:id",
+          "path": ["users", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Update user",
+      "request": {
+        "method": "PUT",
+        "url": {
+          "raw": "https://api.example.com/users/:id",
+          "path": ["users", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Delete user",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "https://api.example.com/users/:id",
+          "path": ["users", ":id"]
+        }
+      }
+    }
+  ]
+}

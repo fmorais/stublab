@@ -1,0 +1,63 @@
+{
+  "info": {
+    "name": "Nested Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Level 1 Folder",
+      "item": [
+        {
+          "name": "Level 2 Folder",
+          "item": [
+            {
+              "name": "Level 3 Folder",
+              "item": [
+                {
+                  "name": "Deep request",
+                  "request": {
+                    "method": "GET",
+                    "url": {
+                      "raw": "https://api.example.com/deep",
+                      "path": ["deep"]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Level 2 request",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "https://api.example.com/level2",
+                  "path": ["level2"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Level 1 request",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://api.example.com/level1",
+              "path": ["level1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Root request",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "https://api.example.com/root",
+          "path": ["root"]
+        }
+      }
+    }
+  ]
+}

@@ -1,11 +1,27 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@web/lib/api-client'
 import type { ExportFile, ImportPreviewResult, ImportResult, ImportStrategy } from '@web/types/import-export'
+import type { ImportSource } from '@web/types/import-external'
+
+export interface ImportPreviewInput {
+  source?: ImportSource
+  data: unknown
+}
 
 export function useImportPreview(slug: string) {
-  return useMutation<ImportPreviewResult, Error, ExportFile>({
-    mutationFn: (data) =>
-      apiClient.post<ImportPreviewResult>(`/workspaces/${slug}/endpoints/import/preview`, { data }),
+  return useMutation<ImportPreviewResult, Error, ImportPreviewInput>({
+    mutationFn: ({ source, data }) => {
+      if (!source || source === 'stublab') {
+        return apiClient.post<ImportPreviewResult>(
+          `/workspaces/${slug}/endpoints/import/preview`,
+          { data },
+        )
+      }
+      return apiClient.post<ImportPreviewResult>(
+        `/workspaces/${slug}/endpoints/import/preview`,
+        { source, data },
+      )
+    },
   })
 }
 

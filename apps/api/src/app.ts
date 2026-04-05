@@ -18,6 +18,7 @@ import { deleteEndpointRoute } from './routes/endpoints/delete.js'
 import { exportEndpointsRoute } from './routes/endpoints/export.js'
 import { importPreviewRoute } from './routes/endpoints/import-preview.js'
 import { importEndpointsRoute } from './routes/endpoints/import.js'
+import { importFromUrlRoute } from './routes/endpoints/import-from-url.js'
 import { listRecordingsRoute } from './routes/recordings/list.js'
 import { getRecordingRoute } from './routes/recordings/get.js'
 import { deleteRecordingRoute } from './routes/recordings/delete.js'
@@ -100,6 +101,7 @@ export async function buildApp() {
     await wsApi.register(exportEndpointsRoute)
     await wsApi.register(importPreviewRoute)
     await wsApi.register(importEndpointsRoute)
+    await wsApi.register(importFromUrlRoute)
     await wsApi.register(listRecordingsRoute)
     await wsApi.register(getRecordingRoute)
     await wsApi.register(deleteRecordingRoute)
