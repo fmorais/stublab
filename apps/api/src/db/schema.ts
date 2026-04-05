@@ -6,6 +6,7 @@ export const workspaces = sqliteTable('workspaces', {
   slug: text('slug').notNull().unique(),
   proxyUrl: text('proxy_url'),
   proxyEnabled: integer('proxy_enabled', { mode: 'boolean' }).notNull().default(false),
+  recordEnabled: integer('record_enabled', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
@@ -53,4 +54,24 @@ export const matchingRules = sqliteTable('matching_rules', {
   createdAt: text('created_at').notNull(),
 }, (table) => [
   index('idx_matching_rules_endpoint_id').on(table.endpointId),
+])
+
+export const recordedInteractions = sqliteTable('recorded_interactions', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  method: text('method').notNull(),
+  path: text('path').notNull(),
+  requestHeaders: text('request_headers', { mode: 'json' }).notNull().default('{}'),
+  requestBody: text('request_body'),
+  responseStatus: integer('response_status').notNull(),
+  responseBody: text('response_body'),
+  responseHeaders: text('response_headers', { mode: 'json' }).notNull().default('{}'),
+  capturedAt: text('captured_at').notNull(),
+  groupKey: text('group_key').notNull(),
+  groupCount: integer('group_count').notNull().default(1),
+}, (table) => [
+  index('idx_recorded_interactions_workspace').on(table.workspaceId),
+  uniqueIndex('idx_recorded_interactions_group').on(table.workspaceId, table.groupKey),
 ])

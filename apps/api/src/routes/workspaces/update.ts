@@ -24,6 +24,7 @@ const updateWorkspaceSchema = z.object({
     'URL não deve conter credenciais',
   ).transform((url) => url.replace(/\/$/, '')).nullable().optional(),
   proxyEnabled: z.boolean().optional(),
+  recordEnabled: z.boolean().optional(),
 })
 
 export async function updateWorkspaceRoute(app: FastifyInstance) {
@@ -33,6 +34,20 @@ export async function updateWorkspaceRoute(app: FastifyInstance) {
     const body = updateWorkspaceSchema.safeParse(request.body)
     if (!body.success) {
       return reply.status(400).send({ error: 'Dados inválidos', code: 'VALIDATION_ERROR', details: body.error.issues })
+    }
+
+    if (body.data.recordEnabled === true) {
+      const existing = await WorkspaceService.findBySlug(slug)
+      if (!existing) {
+        return reply.status(404).send({ error: 'Workspace não encontrado', code: 'NOT_FOUND' })
+      }
+      const proxyWillBeEnabled = body.data.proxyEnabled ?? existing.proxyEnabled
+      if (!proxyWillBeEnabled) {
+        return reply.status(400).send({
+          error: 'Record mode requer proxy mode ativo',
+          code: 'VALIDATION_ERROR',
+        })
+      }
     }
 
     try {

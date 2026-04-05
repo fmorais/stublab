@@ -104,6 +104,15 @@ No YAML files. No restarts. Changes take effect immediately.
 - Global kill switch: `PROXY_ENABLED=false` disables proxy across all workspaces (useful for offline CI)
 - "Proxy ativo" badge visible in the workspace header when proxy is active
 
+### Record mode
+- Enable **record mode** on any workspace that has proxy active — every proxied request is captured to a review queue
+- Identical interactions are **grouped** (same method + path + status + body): a counter shows how many times each was captured instead of creating duplicates
+- Review queue persists across sessions — discard what you don't need, confirm what should become a mock
+- **Save as mock**: opens a pre-filled form (name, method, path, status, body, delay) — edit before saving
+- **Bulk save**: select multiple recordings and create all mocks in one click; conflicts are skipped by default
+- Response bodies > 1 MB are automatically truncated to avoid memory pressure
+- "Gravando" badge (red, pulsing) visible in the workspace header while record mode is active
+
 ### Import / Export
 - Export all or selected endpoints as a JSON file
 - Import endpoints from a previously exported file
@@ -121,7 +130,7 @@ No YAML files. No restarts. Changes take effect immediately.
 - Path params supported (`/api/users/:id`)
 - `delay` field to simulate slow APIs
 - Custom response headers per endpoint
-- 319 tests across API and UI
+- 433 tests across API and UI
 
 ---
 

@@ -4,6 +4,7 @@ export interface Workspace {
   slug: string
   proxyUrl: string | null
   proxyEnabled: boolean
+  recordEnabled: boolean
   createdAt: string
   updatedAt: string
 }
@@ -23,4 +24,5 @@ export interface UpdateWorkspaceInput {
   slug?: string
   proxyUrl?: string | null
   proxyEnabled?: boolean
+  recordEnabled?: boolean
 }
