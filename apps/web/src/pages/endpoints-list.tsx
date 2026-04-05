@@ -68,7 +68,7 @@ export function EndpointsList() {
 
   return (
     <div className="space-y-4">
-      <WorkspaceSelector workspaceName={workspace?.name ?? slug} />
+      <WorkspaceSelector workspaceName={workspace?.name ?? slug} proxyEnabled={workspace?.proxyEnabled} proxyUrl={workspace?.proxyUrl} />
 
       <div className="flex items-center justify-between">
         <div>

@@ -25,7 +25,8 @@
       "Bash(grep -rn \"url:.*\\\\`/api/endpoints\\\\|url: \\\\\"/api/endpoints\\\\|url: '/api/endpoints\" apps/api/tests/routes/)",
       "Bash(sed -i 's|url: '\\\\''/api/endpoints|url: '\\\\''/api/workspaces/default/endpoints|g; s|`/api/endpoints|`/api/workspaces/default/endpoints|g' apps/api/tests/e2e/endpoint-flow.test.ts apps/api/tests/mock/handler.test.ts)",
       "Bash(sed -i 's|url: '\\\\''/mock/|url: '\\\\''/mock/default/|g; s|`/mock/|`/mock/default/|g' apps/api/tests/mock/handler.test.ts apps/api/tests/e2e/endpoint-flow.test.ts)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(pnpm:*)"
     ]
   }
 }

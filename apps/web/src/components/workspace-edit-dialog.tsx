@@ -9,7 +9,10 @@ import {
 import { Button } from '@web/components/ui/button'
 import { Input } from '@web/components/ui/input'
 import { Label } from '@web/components/ui/label'
+import { Switch } from '@web/components/ui/switch'
+import { Alert, AlertDescription } from '@web/components/ui/alert'
 import { useUpdateWorkspace } from '@web/hooks/use-workspaces'
+import { useProxyConfig } from '@web/hooks/use-proxy-config'
 import type { WorkspaceWithStats } from '@web/types/workspace'
 
 interface WorkspaceEditDialogProps {
@@ -20,12 +23,17 @@ interface WorkspaceEditDialogProps {
 }
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const URL_REGEX = /^https?:\/\/[^/\s]+$/
 
 export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }: WorkspaceEditDialogProps) {
   const [name, setName] = useState(workspace.name)
   const [slug, setSlug] = useState(workspace.slug)
+  const [proxyEnabled, setProxyEnabled] = useState(workspace.proxyEnabled ?? false)
+  const [proxyUrl, setProxyUrl] = useState(workspace.proxyUrl ?? '')
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({})
+  const [proxyUrlError, setProxyUrlError] = useState<string | undefined>(undefined)
   const mutation = useUpdateWorkspace()
+  const proxyConfig = useProxyConfig()
 
   const slugChanged = slug !== workspace.slug
 
@@ -33,7 +41,10 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
     if (open) {
       setName(workspace.name)
       setSlug(workspace.slug)
+      setProxyEnabled(workspace.proxyEnabled ?? false)
+      setProxyUrl(workspace.proxyUrl ?? '')
       setErrors({})
+      setProxyUrlError(undefined)
       mutation.reset()
     }
   }, [open, workspace])
@@ -42,7 +53,10 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
     if (!value) {
       setName(workspace.name)
       setSlug(workspace.slug)
+      setProxyEnabled(workspace.proxyEnabled ?? false)
+      setProxyUrl(workspace.proxyUrl ?? '')
       setErrors({})
+      setProxyUrlError(undefined)
       mutation.reset()
     }
     onOpenChange(value)
@@ -56,14 +70,33 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
     else if (slug.length < 2) next.slug = 'Slug deve ter pelo menos 2 caracteres'
     else if (slug.length > 50) next.slug = 'Slug deve ter no máximo 50 caracteres'
     setErrors(next)
-    return Object.keys(next).length === 0
+
+    let urlError: string | undefined
+    if (proxyEnabled) {
+      if (!proxyUrl.trim()) {
+        urlError = 'URL é obrigatória quando proxy está ativo'
+      } else if (!URL_REGEX.test(proxyUrl.trim())) {
+        urlError = 'URL inválida. Use o formato https://api.example.com sem path'
+      }
+    }
+    setProxyUrlError(urlError)
+
+    return Object.keys(next).length === 0 && !urlError
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
     try {
-      await mutation.mutateAsync({ slug: workspace.slug, data: { name: name.trim(), slug } })
+      await mutation.mutateAsync({
+        slug: workspace.slug,
+        data: {
+          name: name.trim(),
+          slug,
+          proxyEnabled,
+          proxyUrl: proxyEnabled && proxyUrl.trim() ? proxyUrl.trim() : null,
+        },
+      })
       handleClose(false)
       onUpdated?.(slug)
     } catch (err) {
@@ -73,6 +106,8 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
       }
     }
   }
+
+  const proxyGloballyDisabled = proxyConfig.data !== undefined && !proxyConfig.data.globallyEnabled
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -109,6 +144,48 @@ export function WorkspaceEditDialog({ open, onOpenChange, workspace, onUpdated }
               <p className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5">
                 Atenção: alterar o slug vai quebrar URLs existentes que apontam para este workspace.
               </p>
+            )}
+          </div>
+
+          <div className="space-y-3 border-t pt-4 mt-2">
+            <h4 className="text-sm font-medium">Proxy Mode</h4>
+
+            {proxyConfig.data && !proxyConfig.data.globallyEnabled && (
+              <Alert>
+                <AlertDescription>
+                  Proxy mode desativado globalmente pelo administrador
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Switch
+                id="proxy-enabled"
+                checked={proxyEnabled}
+                onCheckedChange={setProxyEnabled}
+                disabled={proxyGloballyDisabled}
+              />
+              <Label htmlFor="proxy-enabled" className="text-sm">
+                Encaminhar requests sem mock para serviço real
+              </Label>
+            </div>
+
+            {proxyEnabled && (
+              <div className="space-y-1.5">
+                <Label htmlFor="proxy-url">URL base do serviço</Label>
+                <Input
+                  id="proxy-url"
+                  placeholder="https://api.meuservico.com.br"
+                  value={proxyUrl}
+                  onChange={(e) => setProxyUrl(e.target.value)}
+                />
+                {proxyUrlError && (
+                  <p className="text-sm text-destructive">{proxyUrlError}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Requests sem endpoint mockado serão encaminhadas para esta URL
+                </p>
+              </div>
             )}
           </div>
 

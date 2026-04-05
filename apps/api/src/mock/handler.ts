@@ -1,10 +1,13 @@
-import { FastifyInstance } from 'fastify'
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { eq, and, inArray } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { endpoints, matchingRules } from '../db/schema.js'
 import { WorkspaceService } from '../services/workspace-service.js'
 import { matchEndpoint } from './engine.js'
+import { ProxyService, ProxyServiceError } from '../services/proxy-service.js'
+import { isProxyGloballyEnabled, getProxyTimeoutMs } from '../config/env.js'
 import type { Endpoint, HttpMethod, MatchingRule, RuleSource, RuleOperator } from '../types/endpoint.js'
+import { Readable } from 'stream'
 
 function rowToEndpoint(
   row: typeof endpoints.$inferSelect,
@@ -23,6 +26,46 @@ function rowToEndpoint(
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     matchingRules: rules,
+  }
+}
+
+async function forwardToProxy(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  wildcardPath: string,
+  proxyUrl: string,
+): Promise<void> {
+  try {
+    const queryString = Object.keys(request.query as object).length > 0
+      ? '?' + new URLSearchParams(request.query as Record<string, string>).toString()
+      : ''
+    const result = await ProxyService.forward({
+      method: request.method,
+      path: wildcardPath + queryString,
+      headers: request.headers as Record<string, string>,
+      body: request.raw as unknown as Readable,
+      targetBaseUrl: proxyUrl,
+      clientIp: request.ip,
+      originalHost: request.hostname,
+      originalProto: request.protocol,
+      timeoutMs: getProxyTimeoutMs(),
+    })
+    reply.header('x-stublab-proxied', 'true')
+    for (const [key, value] of Object.entries(result.headers)) {
+      reply.header(key, value)
+    }
+    reply.status(result.status).send(result.body)
+  } catch (err) {
+    reply.header('x-stublab-proxied', 'true')
+    if (err instanceof ProxyServiceError) {
+      if (err.code === 'PROXY_TIMEOUT') {
+        reply.status(504).send({ error: 'Proxy timeout', code: 'PROXY_TIMEOUT', target: err.target })
+        return
+      }
+      reply.status(502).send({ error: 'Proxy error', code: 'PROXY_ERROR', target: err.target, reason: err.reason })
+      return
+    }
+    throw err
   }
 }
 
@@ -84,6 +127,9 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
           ))
 
         if (rows.length === 0) {
+          if (isProxyGloballyEnabled() && workspace.proxyEnabled && workspace.proxyUrl) {
+            return forwardToProxy(request, reply, wildcardPath, workspace.proxyUrl)
+          }
           return reply
             .status(404)
             .send({ error: 'No mock found', code: 'MOCK_NOT_FOUND' })
@@ -119,6 +165,9 @@ export async function mockHandler(app: FastifyInstance): Promise<void> {
         const matched = matchEndpoint(method, wildcardPath, queryParams, headers, body, activeEndpoints)
 
         if (!matched) {
+          if (isProxyGloballyEnabled() && workspace.proxyEnabled && workspace.proxyUrl) {
+            return forwardToProxy(request, reply, wildcardPath, workspace.proxyUrl)
+          }
           return reply
             .status(404)
             .send({ error: 'No mock found', code: 'MOCK_NOT_FOUND' })

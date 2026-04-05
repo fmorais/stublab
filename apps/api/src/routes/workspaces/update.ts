@@ -7,6 +7,14 @@ const slugRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const updateWorkspaceSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   slug: z.string().min(3).max(60).regex(slugRegex, 'Slug deve conter apenas letras minúsculas, números e hifens').optional(),
+  proxyUrl: z.string().url().refine(
+    (url) => { const p = new URL(url); return p.protocol === 'http:' || p.protocol === 'https:' },
+    'Protocolo deve ser http ou https',
+  ).refine(
+    (url) => { const p = new URL(url); return p.pathname === '/' || p.pathname === '' },
+    'URL não deve conter path',
+  ).transform((url) => url.replace(/\/$/, '')).nullable().optional(),
+  proxyEnabled: z.boolean().optional(),
 })
 
 export async function updateWorkspaceRoute(app: FastifyInstance) {

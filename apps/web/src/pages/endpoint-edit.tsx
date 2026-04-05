@@ -63,7 +63,7 @@ export function EndpointEdit() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <WorkspaceSelector workspaceName={workspace?.name ?? slug} />
+      <WorkspaceSelector workspaceName={workspace?.name ?? slug} proxyEnabled={workspace?.proxyEnabled} proxyUrl={workspace?.proxyUrl} />
 
       <div className="flex items-start justify-between">
         <div>

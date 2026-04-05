@@ -2,6 +2,8 @@ export interface Workspace {
   id: string
   name: string
   slug: string
+  proxyUrl: string | null
+  proxyEnabled: boolean
   createdAt: string
   updatedAt: string
 }
@@ -19,4 +21,6 @@ export interface CreateWorkspaceInput {
 export interface UpdateWorkspaceInput {
   name?: string
   slug?: string
+  proxyUrl?: string | null
+  proxyEnabled?: boolean
 }

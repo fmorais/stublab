@@ -20,7 +20,7 @@ export function EndpointCreate() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <WorkspaceSelector workspaceName={workspace?.name ?? slug} />
+      <WorkspaceSelector workspaceName={workspace?.name ?? slug} proxyEnabled={workspace?.proxyEnabled} proxyUrl={workspace?.proxyUrl} />
 
       <div>
         <h1 className="text-xl font-semibold">Novo endpoint</h1>
