@@ -23,6 +23,10 @@ vi.mock('@web/components/import-preview-table', () => ({
 import { useImportPreview, useImportExecute } from '@web/hooks/use-import-endpoints'
 import { useImportFromUrl } from '@web/hooks/use-import-from-url'
 
+const mockUseImportPreview = vi.mocked(useImportPreview)
+const mockUseImportExecute = vi.mocked(useImportExecute)
+const mockUseImportFromUrl = vi.mocked(useImportFromUrl)
+
 const mockPreviewResult: ImportPreviewResult = {
   valid: true,
   version: '1',
@@ -81,20 +85,20 @@ beforeEach(() => {
 
   vi.spyOn(window, 'FileReader').mockImplementation(() => mockFileReader as unknown as FileReader)
 
-  ;(useImportPreview as ReturnType<typeof vi.fn>).mockReturnValue({
+  mockUseImportPreview.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue(mockPreviewResult),
     isPending: false,
-  })
+  } as unknown as ReturnType<typeof useImportPreview>)
 
-  ;(useImportExecute as ReturnType<typeof vi.fn>).mockReturnValue({
+  mockUseImportExecute.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ created: 1, updated: 0, skipped: 0, errors: [] }),
     isPending: false,
-  })
+  } as unknown as ReturnType<typeof useImportExecute>)
 
-  ;(useImportFromUrl as ReturnType<typeof vi.fn>).mockReturnValue({
+  mockUseImportFromUrl.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ source: 'openapi', data: {}, detectedVersion: '3.0.3' }),
     isPending: false,
-  })
+  } as unknown as ReturnType<typeof useImportFromUrl>)
 })
 
 describe('ImportModal', () => {
@@ -170,10 +174,10 @@ describe('ImportModal', () => {
 
   it('botão "Confirmar" chama useImportExecute com a estratégia selecionada', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ created: 1, updated: 0, skipped: 0, errors: [] })
-    ;(useImportExecute as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockUseImportExecute.mockReturnValue({
       mutateAsync,
       isPending: false,
-    })
+    } as unknown as ReturnType<typeof useImportExecute>)
 
     renderModal()
     await proceedToUpload()
@@ -206,10 +210,10 @@ describe('ImportModal', () => {
 
   it('após import bem-sucedido exibe banner com contagem created/updated/skipped', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ created: 3, updated: 1, skipped: 2, errors: [] })
-    ;(useImportExecute as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockUseImportExecute.mockReturnValue({
       mutateAsync,
       isPending: false,
-    })
+    } as unknown as ReturnType<typeof useImportExecute>)
 
     renderModal()
     await proceedToUpload()

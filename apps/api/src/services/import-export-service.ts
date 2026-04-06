@@ -189,16 +189,13 @@ export const ImportExportService = {
       .where(eq(endpoints.workspaceId, workspaceId))
 
     const existingMap = new Map<string, string>()
+    const createdAtMap = new Map<string, Date>()
     for (const row of allExisting) {
       const key = `${row.method}:${row.path}`
-      const current = existingMap.get(key)
-      if (!current) {
+      const existingCreatedAt = createdAtMap.get(key)
+      if (!existingCreatedAt || row.createdAt > existingCreatedAt) {
         existingMap.set(key, row.id)
-        continue
-      }
-      const currentRow = allExisting.find((r) => r.id === current)
-      if (currentRow && row.createdAt > currentRow.createdAt) {
-        existingMap.set(key, row.id)
+        createdAtMap.set(key, row.createdAt)
       }
     }
 
