@@ -181,6 +181,68 @@ export const ImportExportService = {
     }
   },
 
+  async previewFromParsedEndpoints(workspaceId: string, parsedEndpoints: ExportedEndpoint[]): Promise<ImportPreviewResult> {
+    // Por que: endpoints já validados pelo parser — sem revalidação individual com exportedEndpointSchema.
+    const allExisting = await db
+      .select({ id: endpoints.id, method: endpoints.method, path: endpoints.path, createdAt: endpoints.createdAt })
+      .from(endpoints)
+      .where(eq(endpoints.workspaceId, workspaceId))
+
+    const existingMap = new Map<string, string>()
+    const createdAtMap = new Map<string, Date>()
+    for (const row of allExisting) {
+      const key = `${row.method}:${row.path}`
+      const existingCreatedAt = createdAtMap.get(key)
+      if (!existingCreatedAt || row.createdAt > existingCreatedAt) {
+        existingMap.set(key, row.id)
+        createdAtMap.set(key, row.createdAt)
+      }
+    }
+
+    const preview: ImportPreviewItem[] = parsedEndpoints.map((ep, i) => {
+      const key = `${ep.method}:${ep.path}`
+      const existingId = existingMap.get(key)
+
+      if (existingId) {
+        return {
+          index: i,
+          name: ep.name,
+          method: ep.method,
+          path: ep.path,
+          status: 'conflict' as const,
+          existingId,
+          rulesCount: ep.matchingRules.length,
+          errors: [],
+        }
+      }
+
+      return {
+        index: i,
+        name: ep.name,
+        method: ep.method,
+        path: ep.path,
+        status: 'new' as const,
+        rulesCount: ep.matchingRules.length,
+        errors: [],
+      }
+    })
+
+    const summary = {
+      new: preview.filter((p) => p.status === 'new').length,
+      conflict: preview.filter((p) => p.status === 'conflict').length,
+      invalid: 0,
+    }
+
+    return {
+      valid: true,
+      version: '2',
+      sourceWorkspace: undefined,
+      totalInFile: parsedEndpoints.length,
+      preview,
+      summary,
+    }
+  },
+
   async executeImport(workspaceId: string, data: ExportFile, strategy: ImportStrategy): Promise<ImportResult> {
     // Por que: pré-carrega todos os endpoints do workspace de destino para evitar queries dentro da transação.
     const allExisting = await db

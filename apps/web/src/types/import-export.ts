@@ -43,6 +43,7 @@ export interface ImportPreviewResult {
   totalInFile: number
   preview: ImportPreviewItem[]
   summary: { new: number; conflict: number; invalid: number }
+  endpoints?: ExportedEndpoint[]
 }
 
 export interface ImportResult {

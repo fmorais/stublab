@@ -1,0 +1,35 @@
+{
+  "info": {
+    "name": "Variables Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get item with Postman variable",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/items/{{itemId}}",
+          "path": ["items", "{{itemId}}"]
+        }
+      }
+    },
+    {
+      "name": "Get item with OpenAPI style",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://api.example.com/items/{itemId}/sub/{subId}",
+          "path": ["items", "{itemId}", "sub", "{subId}"]
+        }
+      }
+    },
+    {
+      "name": "Request with raw string URL",
+      "request": {
+        "method": "POST",
+        "url": "https://api.example.com/{{version}}/resource"
+      }
+    }
+  ]
+}

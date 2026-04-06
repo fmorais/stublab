@@ -10,6 +10,10 @@ vi.mock('@web/hooks/use-import-endpoints', () => ({
   useImportExecute: vi.fn(),
 }))
 
+vi.mock('@web/hooks/use-import-from-url', () => ({
+  useImportFromUrl: vi.fn(),
+}))
+
 vi.mock('@web/components/import-preview-table', () => ({
   ImportPreviewTable: ({ preview }: { preview: unknown[] }) => (
     <div data-testid="preview-table">{preview.length} itens</div>
@@ -17,6 +21,11 @@ vi.mock('@web/components/import-preview-table', () => ({
 }))
 
 import { useImportPreview, useImportExecute } from '@web/hooks/use-import-endpoints'
+import { useImportFromUrl } from '@web/hooks/use-import-from-url'
+
+const mockUseImportPreview = vi.mocked(useImportPreview)
+const mockUseImportExecute = vi.mocked(useImportExecute)
+const mockUseImportFromUrl = vi.mocked(useImportFromUrl)
 
 const mockPreviewResult: ImportPreviewResult = {
   valid: true,
@@ -62,6 +71,10 @@ function renderModal(props: { open?: boolean; onOpenChange?: (v: boolean) => voi
   )
 }
 
+async function proceedToUpload() {
+  await userEvent.click(screen.getByRole('button', { name: /continuar/i }))
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 
@@ -72,21 +85,27 @@ beforeEach(() => {
 
   vi.spyOn(window, 'FileReader').mockImplementation(() => mockFileReader as unknown as FileReader)
 
-  ;(useImportPreview as ReturnType<typeof vi.fn>).mockReturnValue({
+  mockUseImportPreview.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue(mockPreviewResult),
     isPending: false,
-  })
+  } as unknown as ReturnType<typeof useImportPreview>)
 
-  ;(useImportExecute as ReturnType<typeof vi.fn>).mockReturnValue({
+  mockUseImportExecute.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ created: 1, updated: 0, skipped: 0, errors: [] }),
     isPending: false,
-  })
+  } as unknown as ReturnType<typeof useImportExecute>)
+
+  mockUseImportFromUrl.mockReturnValue({
+    mutateAsync: vi.fn().mockResolvedValue({ source: 'openapi', data: {}, detectedVersion: '3.0.3' }),
+    isPending: false,
+  } as unknown as ReturnType<typeof useImportFromUrl>)
 })
 
 describe('ImportModal', () => {
-  it('renderiza input de arquivo no estado idle', () => {
+  it('renderiza input de arquivo no estado idle', async () => {
     renderModal()
     expect(screen.getByText('Importar endpoints')).toBeInTheDocument()
+    await proceedToUpload()
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     expect(fileInput).not.toBeNull()
     expect(fileInput.accept).toBe('.json')
@@ -94,6 +113,7 @@ describe('ImportModal', () => {
 
   it('mostra erro quando arquivo não é JSON válido', async () => {
     renderModal()
+    await proceedToUpload()
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['not json at all'], 'test.json', { type: 'application/json' })
@@ -112,6 +132,7 @@ describe('ImportModal', () => {
 
   it('mostra erro quando arquivo JSON não tem campo endpoints', async () => {
     renderModal()
+    await proceedToUpload()
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const content = JSON.stringify({ version: '1', exportedAt: '2026-01-01T00:00:00.000Z' })
@@ -131,6 +152,7 @@ describe('ImportModal', () => {
 
   it('após upload válido exibe preview com dados retornados pelo hook', async () => {
     renderModal()
+    await proceedToUpload()
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const content = buildFileContent([{ name: 'Listar users', method: 'GET', path: '/api/users' }])
@@ -152,12 +174,13 @@ describe('ImportModal', () => {
 
   it('botão "Confirmar" chama useImportExecute com a estratégia selecionada', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ created: 1, updated: 0, skipped: 0, errors: [] })
-    ;(useImportExecute as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockUseImportExecute.mockReturnValue({
       mutateAsync,
       isPending: false,
-    })
+    } as unknown as ReturnType<typeof useImportExecute>)
 
     renderModal()
+    await proceedToUpload()
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const content = buildFileContent([{ name: 'Listar users', method: 'GET', path: '/api/users' }])
@@ -187,12 +210,13 @@ describe('ImportModal', () => {
 
   it('após import bem-sucedido exibe banner com contagem created/updated/skipped', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ created: 3, updated: 1, skipped: 2, errors: [] })
-    ;(useImportExecute as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockUseImportExecute.mockReturnValue({
       mutateAsync,
       isPending: false,
-    })
+    } as unknown as ReturnType<typeof useImportExecute>)
 
     renderModal()
+    await proceedToUpload()
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const content = buildFileContent([{ name: 'Listar users', method: 'GET', path: '/api/users' }])
@@ -223,6 +247,7 @@ describe('ImportModal', () => {
 
   it('mostra erro quando FileReader falha ao ler o arquivo', async () => {
     renderModal()
+    await proceedToUpload()
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['data'], 'test.json', { type: 'application/json' })

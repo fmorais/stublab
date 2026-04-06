@@ -1,0 +1,68 @@
+openapi: "3.1.0"
+info:
+  title: Product API
+  version: "1.0.0"
+paths:
+  /products:
+    get:
+      operationId: listProducts
+      summary: List products
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    price:
+                      type: number
+                      minimum: 0
+    post:
+      operationId: createProduct
+      summary: Create product
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              examples:
+                example1:
+                  value:
+                    id: 1
+                    name: "Sample Product"
+                    price: 9.99
+  /products/{id}:
+    get:
+      operationId: getProduct
+      summary: Get product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A product
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  category:
+                    type: string
+                    enum:
+                      - electronics
+                      - clothing
+                      - food
